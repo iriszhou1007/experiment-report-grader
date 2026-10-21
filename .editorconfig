@@ -1,0 +1,12 @@
+# Editor-level counterpart to .gitattributes. Git's policy lives there; this stops editors from
+# producing the CRLF in the first place. Advisory only -- a script or agent that writes files
+# directly (for example through Python) will not consult it, which is why .gitattributes exists.
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{bat,cmd,ps1}]
+end_of_line = crlf

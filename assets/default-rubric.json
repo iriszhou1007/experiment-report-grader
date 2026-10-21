@@ -1,0 +1,52 @@
+{
+  "rubric_id": "provisional-default-v6-obvious-defects-only",
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "items": [
+    {
+      "criterion": "实验报告完整性",
+      "max_score": 20,
+      "grading_notes": ["能在正文或可读截图中找到要求内容即视为已完成；不要因篇幅短、步骤不够详细或栏目命名不同扣分。"],
+      "deduction_rules": [
+        {"id": "required_task_absent", "points": 5, "max_occurrences": 1, "description": "实验要求中的一个核心任务在完整证据中没有结果、过程或实质说明；只有在任务整体明显缺失时使用"},
+        {"id": "important_section_blank", "points": 3, "max_occurrences": 2, "description": "实验明确要求的重要栏目经完整文本或页面核验确认完全空白；结论、小结和题目作答必须使用其专属规则", "requires_visual_evidence": true}
+      ]
+    },
+    {
+      "criterion": "数据记录与问题作答",
+      "max_score": 30,
+      "grading_notes": ["回答简短、没有抄录全部数据或与参考答案措辞不同不扣分；只有完全未回答或与报告自身证据、明确原理直接矛盾才扣分。"],
+      "deduction_rules": [
+        {"id": "required_question_unanswered", "points": 3, "max_occurrences": 16, "description": "实验要求中的一个明确问题经检查完整证据后确认根本没有回答；必须写明题号"},
+        {"id": "key_answer_direct_contradiction", "points": 3, "max_occurrences": 8, "description": "一个关键判断与报告自身数据或无争议的基础原理直接矛盾；必须写明题号与矛盾事实，不用于可辩论或证据不足的技术细节"},
+        {"id": "images_only_no_analysis", "points": 5, "max_occurrences": 1, "description": "相关任务只有图片，整项没有必要的文字说明或分析", "requires_visual_evidence": true},
+        {"id": "text_only_no_required_images", "points": 5, "max_occurrences": 1, "description": "实验明确要求结果或抓包截图，但整项只有文字、完全没有相关图片", "requires_visual_evidence": true}
+      ]
+    },
+    {
+      "criterion": "结论合理性",
+      "max_score": 15,
+      "grading_notes": ["只有实验明确要求独立结论时才使用本项；结论简短但与结果一致不扣分。"],
+      "deduction_rules": [
+        {"id": "conclusion_blank_or_placeholder", "points": 3, "max_occurrences": 1, "description": "实验明确要求的结论经完整证据确认完全空白，或只有‘如上’等占位文字"},
+        {"id": "conclusion_direct_contradiction", "points": 3, "max_occurrences": 1, "description": "核心结论与报告自身实测结果直接矛盾"}
+      ]
+    },
+    {
+      "criterion": "小结质量",
+      "max_score": 20,
+      "grading_notes": ["只有实验明确要求独立小结时才使用本项；篇幅短、反思不深或没有改进建议不扣分。"],
+      "deduction_rules": [
+        {"id": "summary_blank_or_placeholder", "points": 3, "max_occurrences": 1, "description": "实验明确要求的小结经完整证据确认完全空白，或只有无实质内容的占位文字"}
+      ]
+    },
+    {
+      "criterion": "格式规范性与语言表达",
+      "max_score": 15,
+      "grading_notes": ["不因一般措辞、个别错字、截图未逐一标注或个人排版风格扣分。"],
+      "deduction_rules": [
+        {"id": "hard_to_read", "points": 3, "max_occurrences": 1, "description": "页面视觉检查确认文字、图表或结构明显影响正常阅读；不得根据 OCR 错字或文本抽取顺序判断", "requires_visual_evidence": true}
+      ]
+    }
+  ]
+}

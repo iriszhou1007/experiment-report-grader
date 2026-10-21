@@ -1,0 +1,67 @@
+{
+  "name": "experiment-report-grader",
+  "skill_version": "1.6.3",
+  "pipeline_version": "1.9",
+  "description": "Batch-grade PDF laboratory reports against a confirmed rubric, review them locally, and write approved feedback back into the source PDFs.",
+  "entry": "SKILL.md",
+  "requires": {
+    "python_modules": ["pypdf", "PIL"],
+    "python_modules_for_writeback": ["reportlab", "fitz"],
+    "python_modules_for_artifacts": ["openpyxl"],
+    "external_optional": ["tesseract", "pdftoppm"],
+    "external_for_review_panel": ["node"]
+  },
+  "external_paths": [
+    "signature_pdf",
+    "score_font",
+    "python",
+    "node",
+    "ocr_executable",
+    "pdftoppm_executable"
+  ],
+  "hosts": {
+    "agents": {
+      "label": "shared agent root (read by DSH and Codex)",
+      "user": ["~/.agents/skills"],
+      "project": [".agents/skills"],
+      "detect": [],
+      "preferred_user_root": "~/.agents/skills"
+    },
+    "dsh": {
+      "label": "DeepSeek Harness",
+      "user": ["~/.dsh/skills", "~/.agents/skills"],
+      "project": [".dsh/skills", ".agents/skills"],
+      "detect": ["~/.dsh", "~/.agents"],
+      "notes": "Rank ascending decides a name clash: <project>/.dsh/skills (100) > <project>/.agents/skills (200) > customSkillDirs (300) > ~/.dsh/skills (400) > ~/.agents/skills (500). Discovery is exactly one level deep: <root>/<name>/SKILL.md, and nested **/SKILL.md is deliberately not discovered. Frontmatter requires name and description, and an invalid invocation value removes the skill from the catalog entirely."
+    },
+    "codex": {
+      "label": "Codex CLI",
+      "user": ["~/.agents/skills", "~/.codex/skills"],
+      "project": [".agents/skills"],
+      "admin": ["/etc/codex/skills"],
+      "detect": ["~/.codex"],
+      "notes": "The current documentation points at $HOME/.agents/skills; ~/.codex/skills (CODEX_HOME) still holds installed skills in practice, so both are registered. Project scope is scanned from the working directory up to the repository root."
+    },
+    "workbuddy": {
+      "label": "WorkBuddy",
+      "user": ["~/.workbuddy/skills"],
+      "project": [".workbuddy/skills"],
+      "detect": ["~/.workbuddy"],
+      "notes": "Same product family as CodeBuddy with its own directory name."
+    },
+    "codebuddy": {
+      "label": "CodeBuddy Code",
+      "user": ["~/.codebuddy/skills"],
+      "project": [".codebuddy/skills"],
+      "detect": ["~/.codebuddy"],
+      "notes": "Frontmatter additionally understands allowed-tools, context: fork, agent, model and hooks; this skill deliberately stays on the common subset."
+    },
+    "claude": {
+      "label": "Claude Code",
+      "user": ["~/.claude/skills"],
+      "project": [".claude/skills"],
+      "detect": ["~/.claude"],
+      "notes": "Personal and project scope are both loaded, and a <skill-name> entry may be a symlink to a directory elsewhere."
+    }
+  }
+}

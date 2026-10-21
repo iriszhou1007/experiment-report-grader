@@ -1,0 +1,27 @@
+# Line-ending policy. This file is authoritative because it travels with the repository, so it
+# overrides whatever core.autocrlf the machine happens to have. Git for Windows defaults that to
+# true, which checks text files out as CRLF; without this file a Windows edit then shows up as a
+# whole-file diff, and a CRLF shebang breaks bash. Everything text is stored AND checked out as
+# LF, so the working tree is byte-identical on macOS and Windows.
+#
+# Note this normalizes git's view, not the bytes an editor writes: a tool that ignores
+# .editorconfig can still put CRLF on disk. Nothing in this skill may depend on a file's raw
+# bytes for that reason -- see rubric_signature() in scripts/batch_pipeline.py.
+* text=auto eol=lf
+
+# Must be LF: bash fails on a carriage return, in the shebang or at any line end.
+*.sh   text eol=lf
+
+# Windows-native scripts are the deliberate exception: cmd.exe and PowerShell expect CRLF, and a
+# .bat file with LF endings can misbehave around labels.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Never let auto-detection guess on binary payloads. `binary` is a macro for -text -diff.
+*.pdf   binary
+*.xlsx  binary
+*.zip   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary

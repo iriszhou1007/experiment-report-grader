@@ -1,0 +1,288 @@
+{
+  "rubric_id": "experiment-1-web-http-v6-counted-figures",
+  "title": "实验1：Web服务器搭建与HTTP协议分析（IIS/Apache二选一，含教师补充编排要求）",
+  "source_requirements": {
+    "file": "实验1：Web服务器搭建与HTTP协议分析.pdf",
+    "sha256": "9507a25a24ef6df86fc78dbda098bde848f6dfaa94034e32fab79bc075a3ee83",
+    "section": "7. 实验报告要求（PDF第10页）",
+    "path": "assets/guides/experiment-1-web-http.pdf"
+  },
+  "report_requirements": {
+    "RPT-1": "环境与所选服务器结果：IIS/Apache二选一，只提交所选服务器；环境及软件来源/启用方式；根目录/默认首页/监听地址端口/实际URL及文件路径关系；访问截图有地址栏和姓名学号；必要配置截图。",
+    "RPT-2": "完成任务2的10道和任务3的4道分析题；本人目标请求和对应响应截图、编号及具体字段/状态/内容依据；不能只贴图不解释。",
+    "RPT-3": "资料查阅与排障：至少一项资料及来源、具体帮助；实际问题的排查与验证，或无故障时的关键配置验证。",
+    "RPT-4": "结果与简短小结：实际差异及排查依据；按本人操作回答两道小结，不补造未出现报文。",
+    "RPT-5": "教师本次明确补充：每张实验截图必须有图号（如图1、图2或图1-1），且有正文段落按图号引用并描述；每张问题截图扣2分，1/2/3张及以上分别扣2/4/6分，同图多种缺陷仅计一张，最高6分。仅在整份报告没有任何其他扣分时，原页确认普通中文正文段落首行无缩进扣3分；否则不启用缩进扣分。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {
+    "lower": 92,
+    "upper": 98,
+    "minimum_fraction": 0.8
+  },
+  "items": [
+    {
+      "criterion": "Web服务器搭建（IIS或Apache二选一）",
+      "max_score": 30,
+      "grading_notes": [
+        "按本批附件PDF第10页RPT-1评分：IIS或Apache任选一个即可，不因未做另一服务器扣分；两个都做不额外加分。若两个都展示，选有实质证据且对学生有利的一套完整服务器材料，不把非必选的另一套缺失重复扣。",
+        "S-choice所选服务器；S-origin软件来源或启用方式；S-root网站根目录；S-index默认首页文件；S-binding监听地址与端口；S-url实际URL；S-mapping URL与文件路径对应关系。记录在正文或可读截图均可。安装步骤、根路径访问证明、逐配置项作用不是第7节提交要求，不单扣。",
+        "S-name/S-id自建页面姓名/学号；S-capture-fields访问截图地址栏和姓名学号。只按最后部分检查，不要求标题措辞、额外说明段落、班级/实验名称截图、两服务器同页或美化。身份/图像缺失须原页视觉核验。",
+        "只有配置记录和页面访问结果整体未提供才扣5分，并替代本项所有细项；部分记录缺失或明确矛盾合并2分；页面所需身份/截图字段明确缺失合并2分；访问截图完全没有3分。",
+        "软件来源/启用方式已在资料或配置过程说明即满足；同一来源缺失不能再在第4项重复扣。环境版本统一在第4项检查。所有扣分明确confirmed，存在截断/OCR疑点先查原页，不能猜缺失。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "server_result_absent",
+          "points": 5,
+          "max_occurrences": 1,
+          "description": "[RPT-1] 所选服务器配置记录与页面访问结果整体未提供；不检查未选择的方案",
+          "requires_visual_evidence": true,
+          "exclusive_with": [
+            "server_configuration_issue",
+            "personal_page_issue",
+            "server_visit_capture_absent"
+          ]
+        },
+        {
+          "id": "server_configuration_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1] 所选服务器必要记录/来源或启用方式/URL文件关系明确缺失或直接矛盾；合并一次",
+          "requirement_ids": [
+            "S-choice",
+            "S-origin",
+            "S-root",
+            "S-index",
+            "S-binding",
+            "S-url",
+            "S-mapping"
+          ]
+        },
+        {
+          "id": "personal_page_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1] 已有自建页面或访问截图明确缺少姓名/学号/地址栏等必需内容；合并一次",
+          "requires_visual_evidence": true,
+          "requirement_ids": [
+            "S-name",
+            "S-id",
+            "S-capture-fields"
+          ]
+        },
+        {
+          "id": "server_visit_capture_absent",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-1] 有文字配置或结果，但所选服务器访问截图完全没有",
+          "requires_visual_evidence": true
+        }
+      ]
+    },
+    {
+      "criterion": "HTTP请求与响应分析",
+      "max_score": 35,
+      "grading_notes": [
+        "RPT-2明确引用HTTP任务的10道分析题，所以保留以下判断参考；参考不能扩展成额外题目或按小问逐项扣分。",
+        "HTTP-Q1请求方法/资源/版本；HTTP-Q2响应版本/状态码/短语；HTTP-Q3双方IP/端口；HTTP-Q4 Accept-Language及偏好；HTTP-Q5 Accept-Encoding是可接受编码，实际编码看Content-Encoding，未出现如实说明；HTTP-Q6 Accept与Content-Type；HTTP-Q7实际Last-Modified；HTTP-Q8实际Content-Length是实体长度。",
+        "HTTP-Q9用路径、响应首部/内容确认目标网页不是其他资源；HTTP-Q10区分允许保持连接与已证明TCP复用，单组报文不能证明复用，需同一连接后续请求。动态值按本人实验，不强迫出现或编造字段。",
+        "有核心回答且基本正确，少一个次要字段、说明简短、未抄全部数值不扣；截图编号、正文引用和描述统一按第4项RPT-5检查。答案明确完全未写、核心结论直接矛盾，或整组分析完全没有具体报文字段/内容依据，统一用http_answer_issue合并扣2分；涉及题号及HTTP-figure-link（整组证据联系）全部列在requirements。",
+        "缺图事实不能再作为HTTP-figure-link重复扣；没有文字解释时用http_answers_absent扣4分替代局部问题；完全没有抓包截图扣3分须看原页；抓包与分析整体无内容扣8分替代全部细项。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "http_analysis_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-2] HTTP任务抓包与10题分析整体未提供；替代本项其他扣分",
+          "requires_visual_evidence": true,
+          "exclusive_with": [
+            "http_required_capture_absent",
+            "http_answer_issue",
+            "http_answers_absent"
+          ]
+        },
+        {
+          "id": "http_required_capture_absent",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有文字分析，但整项完全没有抓包截图；只有一张可用截图不按完全无图处理",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "http_answer_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有分析但必答题完全未答、核心结论直接矛盾，或整组没有具体报文依据；合并全部明确问题一次扣2分",
+          "requirement_ids": [
+            "HTTP-Q1",
+            "HTTP-Q2",
+            "HTTP-Q3",
+            "HTTP-Q4",
+            "HTTP-Q5",
+            "HTTP-Q6",
+            "HTTP-Q7",
+            "HTTP-Q8",
+            "HTTP-Q9",
+            "HTTP-Q10",
+            "HTTP-figure-link"
+          ]
+        },
+        {
+          "id": "http_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] HTTP任务整组没有必要的文字回答/分析；有图无解释也适用，替代局部分析问题",
+          "exclusive_with": [
+            "http_answer_issue"
+          ]
+        }
+      ]
+    },
+    {
+      "criterion": "Conditional GET分析",
+      "max_score": 25,
+      "grading_notes": [
+        "RPT-2引用缓存任务的4道分析题，RPT-4要求如实解释不同结果；前文仅用于理解题目，不能增加独立扣分点。",
+        "CACHE-Q1首次GET验证字段及缓存状态解释；CACHE-Q2首次响应可用Last-Modified/ETag等及含义；CACHE-Q3再次是否有GET，有则比较条件字段，无则说明检查的原因；CACHE-Q4实际304/200/无网络请求的原因、是否验证及传输影响。",
+        "再次访问没有GET但已观察并合理解释，符合要求；不强制304、If-Modified-Since或不存在的第二请求截图。没有单独的第二次访问4分扣分项；Q3/Q4明确未答并入conditional_answer_issue一次扣2分。",
+        "有核心回答且基本正确，次要解释简略/实际数值不同不扣；截图编号、正文引用和描述统一按第4项RPT-5检查。明确未答、核心直接矛盾或整组无具体报文依据，统一合并扣2分。CACHE-figure-link表示整组证据联系；缺图不能据此重复扣。",
+        "四题整组无文字分析扣4分替代局部问题；整项完全无抓包图扣3分须看原页；抓包及分析整体无内容扣8分替代全部细项。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "conditional_analysis_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 缓存任务抓包与4题分析整体未提供；替代本项其他扣分",
+          "requires_visual_evidence": true,
+          "exclusive_with": [
+            "conditional_required_capture_absent",
+            "conditional_answer_issue",
+            "conditional_answers_absent"
+          ]
+        },
+        {
+          "id": "conditional_required_capture_absent",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有文字分析，但整项完全没有实际抓包截图；不要求不存在的第二GET截图",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "conditional_answer_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有分析但必答题完全未答、核心结论直接矛盾，或整组没有具体报文依据；合并全部明确问题一次扣2分",
+          "requirement_ids": [
+            "CACHE-Q1",
+            "CACHE-Q2",
+            "CACHE-Q3",
+            "CACHE-Q4",
+            "CACHE-figure-link"
+          ]
+        },
+        {
+          "id": "conditional_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 缓存任务整组没有必要的文字回答/分析；有图无解释也适用，替代局部分析问题",
+          "exclusive_with": [
+            "conditional_answer_issue"
+          ]
+        }
+      ]
+    },
+    {
+      "criterion": "独立实验过程与报告质量",
+      "max_score": 10,
+      "grading_notes": [
+        "RPT-1的ENV-OS/ENV-server/ENV-browser/ENV-Wireshark：记录操作系统、所选服务器、浏览器和Wireshark的版本或环境；不检查未选服务器，也不强制精确版本号。软件环境已在正文或图中明确即满足，缺项合并2分。",
+        "RPT-3的SOURCE资料及来源、HELP具体帮助：书名、资料名称/出处、网站名称或链接等能说明来源即可，不强制URL、标准参考文献格式或额外真实性证明。至少一项满足即不扣，不能因不熟悉来源判缺失。",
+        "RPT-3的VERIFY：实际问题的现象/排查依据/处理/验证，或无故障时的一项关键配置验证。存在核心过程但较简/顺序不同/没有故障不扣；整份完全没有排查或验证才扣2分。",
+        "RPT-4的R1：配置或抓包依据如何修正/确认判断；R2：服务供他人使用时核验什么，以及查资料的帮助/困难。分别核对两题，接受全文其他位置的等价实质回答，不要求独立小结标题、特定句式、深度或句数。R1不必写成‘原以为……后来……’；一般抓包/配置/排障困难不自动等于查阅资料困难。某题已有相关实质回答，不因子要点不全按整题未答扣分；只有某题明确完全未答，才按reflection_answers_missing合并扣2分。",
+        "RPT-4的实际差异解释在对应协议分析中检查，不再跨项重复扣。真实性疑点只提示教师核验，不凭相似报告、OCR身份或推测扣分。",
+        "除教师补充RPT-5规定的截图编排和条件性首行缩进外，不按格式难读、其他排版或审美扣分。不能辨认的证据只标记复核，不推断未完成。没有明确问题允许100分，92—98超过80%仅作批次观察目标。",
+        "资料查阅(SOURCE/HELP)、排查验证(VERIFY)、两道小结(R1/R2)必须分别核对，再处理去重；source_and_help_missing已扣不代表可以跳过R1/R2。若学习资料与软件来源实际是同一项遗漏，不与S-origin重复扣；同一资料帮助缺失也不在RPT-3和RPT-4重复扣。但R2的对外服务核验和资料帮助/困难均完全未答时，存在独立的R2未答事实，不能因HELP已在RPT-3扣分就漏检；RPT-4理由须指出该独立未答事实，不再次单扣HELP。软件获取/启用方式和学习资料帮助是不同要求，但不要人为拆同一缺失增加扣分。",
+        "在现有第4项说明i中简述资料、验证、R1和R2的核对结果及依据页码；合格内容可合并简写，无须新增字段或逐要点长表。若因同一事实已归入另一规则而不另扣，简述其规则归属。",
+        "RPT-5的FIG-numbering/FIG-reference/FIG-description：每张实际提交的实验截图须有可对应的图号（图1、图2、图1-1或等价明确编号），正文段落须按图号引用并描述观察结果或用途，例如‘如图2所示，响应状态为304，表示本次进行了缓存验证’。只有图下标题、只有‘见图2’无描述、只写‘如下图’无编号均不完整；一个段落可引用并分别说明多张图，不强求每图单独一段。每张问题截图扣2分，1张扣2分、2张扣4分、3张及以上扣6分；同图同时缺图号、引用和描述也只算一张，后续更多图不再增加扣分。在一个screenshot_documentation_issue条目中列出不同问题图，程序计数并封顶。扣分须查看所指原页，不能据OCR缺少‘图’字推断。",
+        "截图编排只检查报告中实际存在的实验截图，不因整项缺图再扣缺图号/引用。若文字分析全无已按对应任务扣分，不再仅因同一段缺文字重复扣FIG-description；独立缺少图号或正文引用仍按不同截图各扣2分、总计最高6分。已有具体报文描述但缺图号/引用，仅按截图编排扣，不再将同一缺陷记入HTTP-figure-link或CACHE-figure-link。",
+        "RPT-5的BODY-first-line-indent：先评完全部内容与截图规则。只有其他扣分清单为空，才查看原PDF中普通中文叙述性正文段落；至少一处可明确观察到的多行正文段落首行与后续行左缘对齐、没有首行缩进时，使用body_first_line_indent_missing扣3分一次，且它必须是整份报告唯一扣分。标题、题干、列表、代码、表格、图注及截图中的文字不算正文；单行或看不清的段落不据此扣分。只检查有无首行缩进，不额外要求精确两个汉字。",
+        "已有任何其他分项扣分（包括截图编排扣分）时，缩进规则不激活，d中不得保留该规则；程序跨分项校验，错误叠加会被拒绝。无其他问题且正文有缩进仍可100分，不能为避免满分虚构未缩进。",
+        "截图计数使用figures数组，每张记录{id:'p.N#imageK',requirements:[实际缺失要素],reason:'该图具体问题'}。N为原PDF页码，K为该页实际实验截图按自上而下、同高从左到右的序号，不计页眉图标、不使用可能缺失的图号。每个定位只出现一次，所在页必须在evidence与visual_evidence中；顶层requirements是各图要素的并集。优先依原页顺序记录最早三张已确认的问题截图即可封顶，超过三张也不会多扣；无问题不写此条目。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "environment_record_missing",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1] 要求的版本或环境记录明确缺项；合并一次，已写环境而无精确版本号不扣",
+          "requirement_ids": [
+            "ENV-OS",
+            "ENV-server",
+            "ENV-browser",
+            "ENV-Wireshark"
+          ]
+        },
+        {
+          "id": "source_and_help_missing",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-3] 没有至少一项自行查阅的资料及来源，或没有说明具体帮助；合并一次，不强制链接/引用格式",
+          "requirement_ids": [
+            "SOURCE",
+            "HELP"
+          ]
+        },
+        {
+          "id": "verification_process_missing",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-3] 完整报告没有实际问题的排查与验证，也没有关键配置验证过程",
+          "requirement_ids": [
+            "VERIFY"
+          ]
+        },
+        {
+          "id": "reflection_answers_missing",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-4] 两道简短小结中有明确完全未回答；合并一次，不评价深度/句数/标题",
+          "requirement_ids": [
+            "R1",
+            "R2"
+          ]
+        },
+        {
+          "id": "screenshot_documentation_issue",
+          "points": 2,
+          "max_occurrences": 3,
+          "description": "[RPT-5] 已提交截图缺图号、正文按图号引用或文字描述：每张问题截图扣2分，同图多种问题仅算一张，最多扣6分",
+          "requires_visual_evidence": true,
+          "requirement_ids": [
+            "FIG-numbering",
+            "FIG-reference",
+            "FIG-description"
+          ],
+          "count_by": "figure"
+        },
+        {
+          "id": "body_first_line_indent_missing",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-5] 仅在无其他扣分时，原页确认普通中文正文段落首行未缩进；整份报告唯一扣分",
+          "requires_visual_evidence": true,
+          "only_if_no_other_deductions": true,
+          "requirement_ids": [
+            "BODY-first-line-indent"
+          ]
+        }
+      ]
+    }
+  ]
+}
