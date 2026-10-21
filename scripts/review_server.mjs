@@ -35,7 +35,8 @@ const port = Number(args.port ?? 8765);
 const host = "127.0.0.1";
 const python = path.resolve(args.python);
 const pdftoppm = args.pdftoppm ? path.resolve(args.pdftoppm) : null;
-const signaturePdf = args["signature-pdf"] ? path.resolve(args["signature-pdf"]) : null;
+const signatureValue = args["signature-file"] ?? args["signature-pdf"];
+const signaturePdf = signatureValue ? path.resolve(signatureValue) : null;
 const readyFile = path.resolve(args["ready-file"] ?? path.join(workspace, "tmp", "review-server.ready.json"));
 // Batch whose result folder (batch_id + "_批改结果") already exists: open it directly instead of
 // starting on the bundled sample batch, so the panel shows the reviews that were just generated.
@@ -57,11 +58,90 @@ let originalBackupDir = null;
 let batchHtmlPath = null;
 const tempRoot = path.join(workspace, "tmp", "review-server");
 const htmlBuilder = path.join(skillDir, "scripts", "build_review_html.py");
+const submissionPreflight = path.join(skillDir, "scripts", "submission_preflight.py");
 const spreadsheetExporter = path.join(skillDir, "scripts", "export_scores.py");
 const insertFeedback = path.join(skillDir, "scripts", "insert_feedback_page.py");
 const materializer = path.join(skillDir, "scripts", "materialize_reviews.py");
+const batchPipeline = path.join(skillDir, "scripts", "batch_pipeline.py");
 const token = crypto.randomBytes(24).toString("hex");
 let operation = Promise.resolve();
+const writebackPreviews = new Map();
+
+function previewFingerprint(reviewFile, review, options) {
+  return crypto.createHash("sha256").update(JSON.stringify({ reviewFile, review, options })).digest("hex");
+}
+
+async function fileSha256(filePath) {
+  return crypto.createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
+}
+
+function writebackFlags(options, seed) {
+  return [
+    "--feedback-position", options.feedbackPosition === "last" ? "last" : "first",
+    "--seed", String(seed),
+    ...(options.checkmarks ? [] : ["--no-checkmarks"]),
+    ...(options.signature ? [] : ["--no-signature"]),
+    ...(options.score ? [] : ["--no-score"]),
+    ...(options.handwrittenComments ? ["--handwritten-comments"] : []),
+  ];
+}
+
+async function createWritebackPreview(reviewFile, incoming, options = {}) {
+  const reviewPath = safeReviewPath(reviewFile);
+  const stored = JSON.parse(await fs.readFile(reviewPath, "utf8"));
+  if (String(incoming.source_sha256).toLowerCase() !== String(stored.source_sha256).toLowerCase()) throw new Error("Source hash mismatch");
+  if (stored.submission_status) throw new Error("该报告正在等待补交或重新评分，不能批准旧评分");
+  if (stored.adjudication_status === "required" && incoming.adjudication_acknowledged !== true) throw new Error("请先确认评分裁决");
+  const normalizedOptions = {
+    handwrittenComments: options.handwrittenComments === true,
+    checkmarks: options.checkmarks !== false,
+    signature: options.signature !== false,
+    score: options.score !== false,
+    feedbackPosition: options.feedbackPosition === "last" ? "last" : "first",
+  };
+  const source = validateReview({ ...stored, ...incoming, source_file: stored.source_file, source_sha256: stored.source_sha256, student_name: stored.student_name, student_id: stored.student_id });
+  const backup = path.join(originalBackupDir, `原始备份_${path.basename(source)}`);
+  let inputSource = source;
+  try { await fs.access(backup); inputSource = backup; } catch {}
+  const previewReview = { ...stored, ...incoming, schema_version: stored.schema_version,
+    source_file: stored.source_file, source_sha256: stored.source_sha256, student_name: stored.student_name,
+    student_id: stored.student_id, experiment: stored.experiment, rubric_id: stored.rubric_id,
+    max_score: stored.max_score, score_offset: stored.score_offset,
+    review_status: "approved", approved_at: new Date().toISOString(), adjudication_status: stored.adjudication_status,
+    items: incoming.items.map((item, index) => ({ ...stored.items[index], ...item, criterion: stored.items[index].criterion,
+      max_score: stored.items[index].max_score, evidence: stored.items[index].evidence })) };
+  previewReview.total_score = previewReview.items.reduce((sum, item) => sum + Number(item.score), 0);
+  const offset = Number(previewReview.score_offset);
+  if (Number.isFinite(offset) && offset > 0) previewReview.adjusted_total = Math.min(Number(previewReview.max_score), previewReview.total_score + offset);
+  const id = crypto.randomUUID();
+  const seed = crypto.randomInt(1, 1 << 30);
+  const reviewTemp = path.join(tempRoot, `${id}.review.json`);
+  const pdfTemp = path.join(tempRoot, `${id}.preview.pdf`);
+  await fs.mkdir(tempRoot, { recursive: true });
+  try {
+    await fs.writeFile(reviewTemp, JSON.stringify(previewReview), "utf8");
+    const result = await runFile(python, [insertFeedback, "--source", inputSource, "--review", reviewTemp, "--output", pdfTemp,
+      "--approved", ...writebackFlags(normalizedOptions, seed), ...(normalizedOptions.signature && signaturePdf ? ["--signature-pdf", signaturePdf] : [])],
+    { cwd: workspace, windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+    const summary = JSON.parse(result.stdout.trim().split(/\r?\n/).at(-1));
+    const fingerprint = previewFingerprint(reviewFile, incoming, normalizedOptions);
+    const timer = setTimeout(async () => { writebackPreviews.delete(id); await fs.rm(pdfTemp, { force: true }); }, 15 * 60 * 1000);
+    timer.unref?.();
+    writebackPreviews.set(id, { reviewFile, fingerprint, options: normalizedOptions, seed, pdfTemp, timer });
+    return { ok: true, preview_id: id, preview_url: `/api/writeback-preview/${id}`, summary };
+  } catch (error) {
+    await fs.rm(pdfTemp, { force: true });
+    throw error;
+  } finally { await fs.rm(reviewTemp, { force: true }); }
+}
+
+async function discardWritebackPreview(id) {
+  const preview = writebackPreviews.get(id);
+  if (!preview) return;
+  clearTimeout(preview.timer);
+  writebackPreviews.delete(id);
+  await fs.rm(preview.pdfTemp, { force: true });
+}
 
 function safeBatchId(value) {
   const cleaned = String(value ?? "").trim().replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_").replace(/[. ]+$/g, "");
@@ -86,6 +166,16 @@ async function readReviews() {
   return reviews;
 }
 
+async function scanSubmissions(reportDir) {
+  const { stdout } = await runFile(python, [submissionPreflight, reportDir], {
+    encoding: "utf8",
+    env: { ...process.env, PYTHONUTF8: "1" },
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  const result = JSON.parse(stdout);
+  return Array.isArray(result.entries) ? result.entries : [];
+}
+
 async function selectBatch(reportDirInput, batchName, inspectionModeInput = "text_only", autoUpgradeVisualInput = false) {
   const reportDir = path.resolve(String(reportDirInput ?? ""));
   const stat = await fs.stat(reportDir);
@@ -94,15 +184,37 @@ async function selectBatch(reportDirInput, batchName, inspectionModeInput = "tex
     .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pdf"))
     .map((entry) => entry.name)
     .sort();
+  const submissionPreflight = await scanSubmissions(reportDir);
   const batchId = safeBatchId(batchName || path.basename(reportDir));
+  const previousPreflight = path.resolve(batch?.report_dir ?? "") === reportDir && batch?.batch_id === batchId
+    ? (batch?.submission_preflight ?? [])
+    : [];
+  const priorReturns = previousPreflight
+    .filter((entry) => String(entry.status ?? "").includes("需重新提交") && entry.student_id)
+    .map((entry) => `${entry.student_id}|${String(entry.experiment ?? "").toLowerCase()}`);
+  for (const entry of submissionPreflight) {
+    if (entry.file_type !== "PDF" || !entry.included_in_grading) continue;
+    const key = `${entry.student_id}|${String(entry.experiment ?? "").toLowerCase()}`;
+    if (!priorReturns.includes(key)) continue;
+    entry.status = "已重新提交";
+    entry.resubmitted = true;
+    entry.reasons = [...(entry.reasons ?? []), "已检测到此前退回报告的 PDF 补交，可开始重新评分"];
+  }
   const inspectionMode = ["text_only", "smart", "full_visual"].includes(inspectionModeInput) ? inspectionModeInput : "text_only";
   const autoUpgradeVisual = autoUpgradeVisualInput !== false;
+  const resultDir = path.join(reportDir, `${batchId}_批改结果`);
+  let savedBatchInfo = {};
+  try { savedBatchInfo = JSON.parse(await fs.readFile(path.join(resultDir, "批次信息.json"), "utf8")); }
+  catch {}
   const next = {
+    ...savedBatchInfo,
     batch_id: batchId,
     batch_name: String(batchName || path.basename(reportDir)),
     report_dir: reportDir,
     pdf_count: pdfFiles.length,
+    eligible_pdf_count: submissionPreflight.filter((entry) => entry.file_type === "PDF" && entry.included_in_grading).length,
     pdf_files: pdfFiles,
+    submission_preflight: submissionPreflight,
     inspection_mode: inspectionMode,
     auto_upgrade_visual: autoUpgradeVisual,
     score_increment: 1,
@@ -153,13 +265,15 @@ async function openExistingBatch(batchDirInput) {
     batch_id: batchId,
     batch_name: String(info.batch_name || batchId),
     report_dir: reportDir,
-    pdf_count: pdfFiles.length,
+    pdf_count: Number(info.submitted_pdf_count ?? info.pdf_count ?? pdfFiles.length),
+    eligible_pdf_count: Number(info.eligible_pdf_count ?? info.pdf_count ?? pdfFiles.length),
     pdf_files: pdfFiles,
     inspection_mode: info.inspection_mode || "smart",
     auto_upgrade_visual: info.auto_upgrade_visual !== false,
     score_increment: Number(info.score_increment ?? 1),
     // Settings-level notes written by finalize; the panel shows them once above the report list.
     batch_notices: Array.isArray(info.batch_notices) ? info.batch_notices : [],
+    submission_preflight: Array.isArray(info.submission_preflight) ? info.submission_preflight : await scanSubmissions(reportDir),
     updated_at: new Date().toISOString(),
   };
   applyBatch(next);
@@ -190,6 +304,91 @@ async function reportFolders() {
     folders.push({ name: path.basename(current), path: current, pdf_count: pdfCount, current: true });
   }
   return folders.sort((left, right) => left.name.localeCompare(right.name, "zh-CN", { numeric: true }));
+}
+
+function managedWorkDir() {
+  const root = path.resolve(workspace, "tmp", "experiment-report-grader");
+  const candidate = path.resolve(root, safeBatchId(batch.batch_id));
+  if (path.dirname(candidate) !== root) throw new Error("拒绝访问批次临时目录之外的路径");
+  if (batch.work_dir && path.resolve(batch.work_dir) !== candidate) {
+    throw new Error("批次记录的暂存路径与 skill 管理的批次路径不一致，拒绝清理");
+  }
+  return { root, candidate };
+}
+
+async function cleanupSummary() {
+  const { root, candidate } = managedWorkDir();
+  const reasons = [];
+  const entries = [];
+  let fileCount = 0;
+  let byteCount = 0;
+  let exists = false;
+  try {
+    const rootReal = await fs.realpath(root);
+    const info = await fs.lstat(candidate);
+    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("评分暂存路径不是普通目录，拒绝清理");
+    const candidateReal = await fs.realpath(candidate);
+    if (path.dirname(candidateReal) !== rootReal) throw new Error("评分暂存目录解析到管理范围之外，拒绝清理");
+    exists = true;
+    for (const entry of await fs.readdir(candidate, { withFileTypes: true })) {
+      entries.push({ name: entry.name, type: entry.isDirectory() ? "文件夹" : entry.isFile() ? "文件" : "其他" });
+    }
+    async function measure(directory) {
+      for (const entry of await fs.readdir(directory, { withFileTypes: true })) {
+        const file = path.join(directory, entry.name);
+        if (entry.isSymbolicLink()) { fileCount++; continue; }
+        if (entry.isDirectory()) await measure(file);
+        else if (entry.isFile()) { const stat = await fs.stat(file); fileCount++; byteCount += stat.size; }
+      }
+    }
+    await measure(candidate);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+
+  const infoPath = path.join(outputDir, "批次信息.json");
+  let batchInfo = {};
+  try { batchInfo = JSON.parse(await fs.readFile(infoPath, "utf8")); }
+  catch { reasons.push("缺少可读取的批次信息"); }
+  if (!exists) reasons.push("没有找到本批次的评分暂存目录");
+  if (!batchInfo.finalized_at || Number(batchInfo.pending_count ?? 0) > 0) reasons.push("评分或盲复核尚未全部完成");
+  const reviews = await readReviews();
+  if (!reviews.length) reasons.push("没有评分记录可供完成状态核验");
+  const incomplete = reviews.filter((review) => review.review_status !== "approved" || review.submission_status || review.adjudication_status === "required");
+  if (incomplete.length) reasons.push(`还有 ${incomplete.length} 份报告未完成教师审核、补交处理或评分裁决`);
+  for (const file of [infoPath, workbookPath, batchHtmlPath]) {
+    try { if ((await fs.stat(file)).size <= 0) reasons.push(`正式结果文件为空：${path.basename(file)}`); }
+    catch { reasons.push(`缺少正式结果文件：${path.basename(file)}`); }
+  }
+  try {
+    const manifest = JSON.parse(await fs.readFile(path.join(candidate, "grading-manifest.json"), "utf8"));
+    if (manifest.batch_id !== batch.batch_id || !manifest.result_dir || path.resolve(manifest.result_dir) !== path.resolve(outputDir)) reasons.push("暂存目录中的批次清单与当前结果目录不匹配");
+  } catch { reasons.push("缺少匹配当前批次的评分清单"); }
+  return {
+    ok: true,
+    available: reasons.length === 0,
+    reasons,
+    directory: candidate,
+    exists,
+    entries,
+    file_count: fileCount,
+    bytes: byteCount,
+    preserved: [outputDir, reviewDir, workbookPath, batchHtmlPath, originalBackupDir],
+  };
+}
+
+async function cleanBatchWork() {
+  const summary = await cleanupSummary();
+  if (!summary.available) throw new Error(summary.reasons.join("；"));
+  const { candidate } = managedWorkDir();
+  await runFile(python, [batchPipeline, "clean", "--work-dir", candidate], {
+    cwd: workspace,
+    windowsHide: true,
+    env: { ...process.env, EXPERIMENT_REPORT_GRADER_WORKSPACE: workspace, PYTHONUTF8: "1" },
+    maxBuffer: 1024 * 1024,
+  });
+  batch.work_dir = null;
+  return { ok: true, removed: candidate, preserved: summary.preserved };
 }
 
 let restored = false;
@@ -327,10 +526,11 @@ async function replaceFile(tempPath, finalPath) {
   await fs.rm(tempPath, { force: true });
 }
 
-async function saveReview(reviewFile, incoming, approve) {
+async function saveReview(reviewFile, incoming, approve, writebackOptions = {}, previewSeed = null) {
   const reviewPath = safeReviewPath(reviewFile);
   const originalText = await fs.readFile(reviewPath, "utf8");
   const original = JSON.parse(originalText);
+  if (original.submission_status) throw new Error("该报告正在等待补交或重新评分，不能保存旧评分或写回");
   if (String(incoming.source_sha256).toLowerCase() !== String(original.source_sha256).toLowerCase()) {
     throw new Error("Source hash in the submitted review does not match the current draft");
   }
@@ -431,7 +631,8 @@ async function saveReview(reviewFile, incoming, approve) {
           "--output",
           tempPdf,
           "--approved",
-          ...(signaturePdf ? ["--signature-pdf", signaturePdf] : []),
+          ...writebackFlags(writebackOptions, previewSeed ?? crypto.randomInt(1, 1 << 30)),
+          ...(writebackOptions.signature && signaturePdf ? ["--signature-pdf", signaturePdf] : []),
         ],
         {
           cwd: workspace,
@@ -453,15 +654,21 @@ async function saveReview(reviewFile, incoming, approve) {
         total_pages: pdfSummary.total_pages ?? null,
         score_written: annotation.score?.score_text ?? null,
         signature_ink_annotations: annotation.signature_ink_annotations ?? null,
+        signature_image_count: annotation.signature_image_count ?? null,
+        signature_image_rect: annotation.signature_image_rect ?? null,
         checkmarked_pages: (annotation.checkmarked_pages ?? []).length,
         unmarked_pages: annotation.unmarked_pages ?? null,
         seed: annotation.seed ?? null,
+        handwritten_comments: writebackOptions.handwrittenComments === true,
+        checkmarks_enabled: writebackOptions.checkmarks !== false,
+        signature_enabled: writebackOptions.signature !== false,
+        score_enabled: writebackOptions.score !== false,
+        feedback_position: writebackOptions.feedbackPosition === "last" ? "last" : "first",
       };
       await fs.writeFile(reviewPath, JSON.stringify(review, null, 2) + "\n", "utf8");
       if (pdftoppm) {
-        // Render the sheet where the generator says it landed — it is prepended, not
-        // appended — and the review page too, since that page now carries the checkmark,
-        // the signature and the score.
+        // Render the feedback sheet at its selected end and the review page, which may
+        // carry the selected checkmark, signature, score, or handwritten comments.
         const feedbackPage = Number(pdfSummary.feedback_page ?? pdfSummary.total_pages ?? 1);
         const reviewPage = Number(pdfSummary.review_page_in_output ?? 0);
         for (const [label, pageNumber] of [
@@ -503,7 +710,6 @@ async function saveReview(reviewFile, incoming, approve) {
     }
     await fs.mkdir(path.dirname(batchHtmlPath), { recursive: true });
     await fs.copyFile(tempHtml, batchHtmlPath);
-    await replaceFile(tempHtml, htmlPath);
     await replaceFile(tempWorkbook, workbookPath);
     committed = true;
     return {
@@ -524,6 +730,72 @@ async function saveReview(reviewFile, incoming, approve) {
     }
     await Promise.all([tempReview, tempHtml, tempWorkbook, tempPdf, tempCurrentSource].map((file) => fs.rm(file, { force: true })));
   }
+}
+
+async function setResubmissionStatus(reviewFile, action) {
+  const reviewPath = safeReviewPath(reviewFile);
+  const originalText = await fs.readFile(reviewPath, "utf8");
+  const review = JSON.parse(originalText);
+  const source = validateReview(review);
+  if (action === "request") {
+    if (review.submission_status) throw new Error("该报告已处于补交流程中");
+    const baselineHash = await fileSha256(source);
+    await fs.mkdir(originalBackupDir, { recursive: true });
+    const parsedSource = path.parse(source);
+    const resubmissionBackup = path.join(originalBackupDir, `退回前_${parsedSource.name}_${baselineHash.slice(0, 10)}${parsedSource.ext}`);
+    try { await fs.access(resubmissionBackup); } catch { await fs.copyFile(source, resubmissionBackup); }
+    review.resubmission_baseline_sha256 = baselineHash;
+    review.resubmission_backup = await fs.realpath(resubmissionBackup);
+    review.resubmission_previous_review_status = review.review_status || "draft";
+    review.resubmission_previous_approved_at = review.approved_at ?? null;
+    review.submission_status = "resubmission_required";
+    review.resubmission_requested_at = new Date().toISOString();
+    review.review_status = "resubmission_required";
+    review.approved_at = null;
+  } else if (action === "confirm_received") {
+    if (review.submission_status !== "resubmission_required") throw new Error("请先将报告标记为需要重新提交");
+    const currentHash = await fileSha256(source);
+    review.submission_status = "resubmitted";
+    review.resubmitted_at = new Date().toISOString();
+    review.resubmitted_sha256 = currentHash;
+    review.review_status = "resubmitted";
+    review.approved_at = null;
+  } else if (action === "cancel") {
+    if (!review.submission_status) throw new Error("该报告当前没有待取消的补交流程");
+    const currentHash = await fileSha256(source);
+    if (currentHash !== String(review.resubmission_baseline_sha256 || review.source_sha256).toLowerCase()) {
+      throw new Error("PDF 已变化，不能直接恢复旧评分。请先核实当前文件，再决定是否重新评分。");
+    }
+    review.review_status = review.resubmission_previous_review_status || "draft";
+    review.approved_at = review.resubmission_previous_approved_at ?? null;
+    delete review.submission_status;
+    delete review.resubmission_baseline_sha256;
+    delete review.resubmission_backup;
+    delete review.resubmission_requested_at;
+    delete review.resubmitted_at;
+    delete review.resubmitted_sha256;
+    delete review.resubmission_previous_review_status;
+    delete review.resubmission_previous_approved_at;
+  } else {
+    throw new Error("Invalid resubmission action");
+  }
+  const temp = `${reviewPath}.${crypto.randomUUID()}.tmp`;
+  await fs.writeFile(temp, JSON.stringify(review, null, 2) + "\n", "utf8");
+  await replaceFile(temp, reviewPath);
+  const tempHtml = path.join(tempRoot, `${crypto.randomUUID()}.html`);
+  const tempWorkbook = path.join(tempRoot, `${crypto.randomUUID()}.xlsx`);
+  try {
+    await runArtifacts(tempHtml, tempWorkbook);
+    await fs.mkdir(path.dirname(batchHtmlPath), { recursive: true });
+    await fs.copyFile(tempHtml, batchHtmlPath);
+    await replaceFile(tempWorkbook, workbookPath);
+  } catch (error) {
+    await fs.writeFile(reviewPath, originalText, "utf8");
+    throw error;
+  } finally {
+    await Promise.all([tempHtml, tempWorkbook].map((file) => fs.rm(file, { force: true })));
+  }
+  return { ok: true, review: { ...review, __review_file: reviewFile } };
 }
 
 async function sourceForReview(reviewFile) {
@@ -576,6 +848,9 @@ const server = http.createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/config") {
       return sendJson(response, 200, { ok: true, mode: "local-server", token, batch: { ...batch, result_dir: outputDir, review_count: (await readReviews()).length } });
     }
+    if (request.method === "GET" && url.pathname === "/api/cleanup") {
+      return sendJson(response, 200, await cleanupSummary());
+    }
     if (request.method === "GET" && url.pathname === "/api/health") {
       return sendJson(response, 200, { ok: true, workspace, batch_id: batch.batch_id, artifact_backend: "python" });
     }
@@ -591,11 +866,46 @@ const server = http.createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/graded-pdf") {
       return serveFile(request, response, await sourceForReview(url.searchParams.get("review_file")), "application/pdf");
     }
+    if (request.method === "GET" && url.pathname.startsWith("/api/writeback-preview/")) {
+      const id = url.pathname.split("/").at(-1);
+      const preview = writebackPreviews.get(id);
+      if (!preview) return sendError(response, 404, "Preview expired; generate a new preview");
+      return serveFile(request, response, preview.pdfTemp, "application/pdf");
+    }
+    if (request.method === "POST" && url.pathname === "/api/review-preview") {
+      if (request.headers["x-review-token"] !== token) return sendError(response, 403, "Invalid review token");
+      const body = await readBody(request);
+      return sendJson(response, 200, await createWritebackPreview(body.review_file, body.review, body.options));
+    }
+    if (request.method === "POST" && url.pathname === "/api/review-preview/discard") {
+      if (request.headers["x-review-token"] !== token) return sendError(response, 403, "Invalid review token");
+      const body = await readBody(request);
+      await discardWritebackPreview(String(body.preview_id || ""));
+      return sendJson(response, 200, { ok: true });
+    }
+    if (request.method === "POST" && url.pathname === "/api/resubmission") {
+      if (request.headers["x-review-token"] !== token) return sendError(response, 403, "Invalid review token");
+      const body = await readBody(request);
+      const task = () => setResubmissionStatus(body.review_file, body.action);
+      operation = operation.then(task, task);
+      return sendJson(response, 200, await operation);
+    }
     if (request.method === "POST" && url.pathname === "/api/review") {
       if (request.headers["x-review-token"] !== token) return sendError(response, 403, "Invalid review token");
       const body = await readBody(request);
       if (!['save_draft', 'approve_and_generate'].includes(body.action)) return sendError(response, 400, "Invalid action");
-      const task = () => saveReview(body.review_file, body.review, body.action === "approve_and_generate");
+      let preview = null;
+      const options = body.action === "approve_and_generate" ? {
+        handwrittenComments: body.options?.handwrittenComments === true,
+        checkmarks: body.options?.checkmarks !== false,
+        signature: body.options?.signature !== false,
+        score: body.options?.score !== false,
+        feedbackPosition: body.options?.feedbackPosition === "last" ? "last" : "first",
+      } : {};
+      const task = async () => {
+        const result = await saveReview(body.review_file, body.review, body.action === "approve_and_generate", options, null);
+        return result;
+      };
       operation = operation.then(task, task);
       return sendJson(response, 200, await operation);
     }
@@ -604,6 +914,14 @@ const server = http.createServer(async (request, response) => {
       const body = await readBody(request);
       const selected = await selectBatch(body.report_dir, body.batch_name, body.inspection_mode, body.auto_upgrade_visual);
       return sendJson(response, 200, { ok: true, batch: selected, reviews: await readReviews() });
+    }
+    if (request.method === "POST" && url.pathname === "/api/cleanup") {
+      if (request.headers["x-review-token"] !== token) return sendError(response, 403, "Invalid review token");
+      const body = await readBody(request);
+      if (body.confirm !== true) return sendError(response, 400, "请先确认清理操作");
+      const task = cleanBatchWork;
+      operation = operation.then(task, task);
+      return sendJson(response, 200, await operation);
     }
     sendError(response, 404, "Not found");
   } catch (error) {

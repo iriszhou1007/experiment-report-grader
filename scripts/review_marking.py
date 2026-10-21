@@ -19,6 +19,7 @@ import random
 from pathlib import Path
 
 import fitz
+from PIL import Image
 
 from writeback_paths import DEFAULT_SCORE_FONT
 
@@ -304,6 +305,8 @@ def _copy_ink_annot(target_page: fitz.Page, annot: fitz.Annot, dx: float, dy: fl
 
 def signature_ink_color(signature_pdf: Path) -> tuple[float, float, float]:
     """Stroke colour of the template's handwriting, so the typed score matches the pen."""
+    if signature_pdf.suffix.lower() != ".pdf":
+        return (0.96, 0.26, 0.22)
     with fitz.open(signature_pdf) as document:
         try:
             page_index = find_review_page(document)
@@ -320,17 +323,69 @@ def signature_ink_color(signature_pdf: Path) -> tuple[float, float, float]:
     return (0.96, 0.26, 0.22)
 
 
+def is_signature_image(path: Path) -> bool:
+    return path.suffix.lower() == ".png"
+
+
+def validate_signature_image(path: Path) -> tuple[int, int]:
+    """Accept a tightly cropped raster signature; require transparency to avoid white-box overlays."""
+    with Image.open(path) as image:
+        image.verify()
+    with Image.open(path) as image:
+        if image.format != "PNG":
+            raise ValueError("signature image must be PNG")
+        width, height = image.size
+        if width < 80 or height < 20:
+            raise ValueError("signature image is too small; provide a clear, tightly cropped image")
+        if width > 6000 or height > 3000:
+            raise ValueError("signature image dimensions are unexpectedly large")
+        if "A" in image.getbands():
+            alpha = image.getchannel("A")
+            low, high = alpha.getextrema()
+            bounds = alpha.getbbox()
+            if low < 255 and high > 0 and bounds:
+                ink_area = (bounds[2] - bounds[0]) * (bounds[3] - bounds[1])
+                if ink_area < width * height * 0.12:
+                    raise ValueError("signature image has too much transparent margin; crop it tightly")
+                return width, height
+        raise ValueError(
+            "signature image needs a transparent background (PNG with alpha); "
+            "opaque images could cover printed report content"
+        )
+
+
+def copy_signature_image(path: Path, target_page: fitz.Page, signature_label_rect: fitz.Rect) -> fitz.Rect:
+    """Place a transparent signature image in the blank area immediately right of the label."""
+    width, height = validate_signature_image(path)
+    available_width = target_page.rect.x1 - signature_label_rect.x1 - 12
+    if available_width < 24:
+        raise ValueError("not enough blank space to the right of the teacher-signature label")
+    max_height = max(20.0, min(42.0, signature_label_rect.height * 2.8))
+    scale = min(available_width / width, max_height / height, 1.0)
+    draw_width, draw_height = width * scale, height * scale
+    x0 = signature_label_rect.x1 + 4
+    y0 = (signature_label_rect.y0 + signature_label_rect.y1 - draw_height) / 2
+    rect = fitz.Rect(x0, y0, x0 + draw_width, y0 + draw_height)
+    target_page.insert_image(rect, filename=str(path), keep_proportion=True, overlay=True)
+    return rect
+
+
 def copy_signature_ink(
     signature_pdf: Path,
     target_document: fitz.Document,
     target_page_index: int,
     source_page_index: int | None = None,
 ) -> int:
-    """Copy only the teacher-signature ink from the template onto the target review page.
+    """Copy teacher-signature ink from a PDF or place a transparent PNG on the review page.
 
     The template's score ink is deliberately skipped: it is the fixed ``100`` that this skill
     replaces with the graded score.
     """
+    if is_signature_image(signature_pdf):
+        target_page = target_document[target_page_index]
+        _score_rect, target_signature_rect = review_label_rects(target_document, target_page_index)
+        copy_signature_image(signature_pdf, target_page, target_signature_rect)
+        return 1
     with fitz.open(signature_pdf) as source_document:
         if source_page_index is None:
             try:

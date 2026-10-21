@@ -218,6 +218,18 @@ def verify_pair(
             page_reports.append(entry)
         result["page_reports"] = page_reports
 
+        for comment in summary.get("handwritten_comments", []):
+            page_index = int(comment["page"]) - 1
+            if not 0 <= page_index < original.page_count:
+                problems.append(f"handwritten comment refers to invalid page {page_index + 1}")
+                continue
+            box = fitz.Rect(comment["rect"])
+            existing_comment_boxes = text_boxes(original[page_index]) + image_boxes(original[page_index])
+            if any(box.intersects(rect) for rect in existing_comment_boxes):
+                problems.append(f"handwritten comment overlaps existing content on page {page_index + 1}")
+            if comment["text"] not in annotated[page_index].get_text():
+                problems.append(f"handwritten comment is missing from page {page_index + 1}")
+
         # Obstacles come from the ORIGINAL page: the annotated one already contains the score
         # this is meant to check, and would otherwise be flagged as its own obstacle.
         original_review = original[review_page_index]
@@ -270,6 +282,20 @@ def verify_pair(
                         f"signature ink overlaps {len(hits)} existing box(es): "
                         f"{[original_review.get_textbox(rect)[:20] for rect in hits]}"
                     )
+
+        if summary.get("signature_image_count"):
+            box = fitz.Rect(summary["signature_image_rect"])
+            hits = [rect for rect in existing if box.intersects(rect)]
+            result["signature_image"] = {
+                "rect": [round(value, 2) for value in box],
+                "obstacles_hit": len(hits),
+                "hit_text": [original_review.get_textbox(rect)[:20] for rect in hits],
+            }
+            if hits:
+                problems.append(
+                    f"signature image overlaps {len(hits)} existing box(es): "
+                    f"{[original_review.get_textbox(rect)[:20] for rect in hits]}"
+                )
 
         if pixel_dpi:
             result["pixel_diff"] = pixel_diff(original, annotated, review_page_index, pixel_dpi)

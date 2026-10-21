@@ -1,7 +1,9 @@
 {
   "_README": "Copy to config/local.json and fill in what this machine needs. Every key is optional: an unset key falls through to a bundled asset, then to platform probes. Each value can also be supplied as an EXPERIMENT_REPORT_GRADER_* environment variable (name in brackets) or a command-line flag, and flags win.",
+  "signature_file": "",
   "signature_pdf": "",
-  "[EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF]": "PDF carrying the teacher-signature ink for the approved write-back",
+  "[EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE]": "annotated signature PDF or transparent PNG for approved write-back",
+  "[EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF]": "legacy variable; also accepts a transparent PNG",
   "score_font": "",
   "[EXPERIMENT_REPORT_GRADER_SCORE_FONT]": "handwriting face for the score written into 成绩评定",
   "python": "",

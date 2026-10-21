@@ -16,12 +16,12 @@ python scripts\bootstrap.py --install  :: 安装缺失的 Python 依赖
 ```
 （macOS / Linux 把 `python` 换成 `python3`，路径分隔符换成 `/`。）
 
-**③ 配置签名模板（必做）。** 老师的签名是个人笔迹，**不随包分发、也无法自动生成**，所以未配置前 `bootstrap` 会标 `BLOCK` 并以非零状态退出。任选一种方式提供：
+**③ 配置教师签名（必做）。** 可提供带 Ink 笔迹标注的 PDF，或背景透明、紧密裁切的 PNG。签名是个人凭证，不随包分发，也不会自动绘制、抠图或改造；若在对话中附图，先确认该图片是获授权使用的教师签名。未配置或文件不可用时，`bootstrap` 会标 `BLOCK`，评分前的 `prepare` 会停止。任选一种方式配置：
 
 ```bat
-setx EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF "C:\Users\你\Documents\签名模板.pdf"
+setx EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE "C:\Users\你\Documents\签名.png"
 ```
-或写进 `config\local.json`（可先用 `python scripts\bootstrap.py --write-config` 生成），或把模板 PDF 放到 `assets\signature\`。模板是一份带签名 Ink 注释的 PDF，从原来那台机器直接拷过来即可。未配置时批改、审核、Excel 都照常，只有"批准并写回源 PDF"会明确拒绝——不会静默跳过签名。
+也可使用 `--signature-file` / 兼容旧参数 `--signature-pdf`，写入 `config\local.json`（可先用 `python scripts\bootstrap.py --write-config` 生成），或把 PDF/透明 PNG 放到 `assets\signature\`。旧环境变量 `EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF` 继续兼容。PNG 原样用于教师批准后的签名栏写回；若图片带不透明背景、过小或格式损坏，前置检查会停止。
 
 **④ 注册到你的 AI 工具。** 先看它要装到哪，再真正执行：
 
@@ -66,10 +66,11 @@ python scripts\batch_pipeline.py doctor --self-test
 ```text
 使用 experiment-report-grader Skill。
 报告文件夹：D:\课程\实验报告\实验1
-使用默认评分标准、仅检查文字和整数分，直接生成评分草稿、审核页面和 Excel，不要写入 PDF。
+实验主题：实验1：Web服务器搭建与HTTP协议分析
+使用默认评分标准和整数分。检查完目录后，先问我选择哪种报告检查模式，再生成评分草稿、审核页面和 Excel，不要写入 PDF。
 ```
 
-同一课程后续实验会自动复用最近一次的评分标准和检查设置，不需要再次确认。如果想修改评分标准或检查模式，在开始指令中直接说明即可。
+开始时只需要提供实验报告文件夹地址。Skill 会先检查目录里的文件类型、文件名和可能的实验主题，再检查匹配的评分标准、评分设置及运行前置条件；之后汇报检查结果。评分前，Skill 会在对话中请你选择报告检查模式；这一步发生在生成评分草稿和打开审核面板之前。审核面板只用于复核已生成的评分草稿。面板会列出需处理的预检状态；文件名缺少姓名或学号时标记为需重交，不进入评分和成绩统计；文件名显示多个实验主题时会暂停评分，先请教师拆分或确认。只提供 `.doc/.docx` 的报告会标记为“需重新提交 PDF”，不参与评分和批次统计。OCR、签名等问题不会在一开始询问。
 
 Skill 默认采用整数分。模型不再凭整体印象选分数档，而是逐项记录扣分事实、页码与确定性，程序按已确认规则计算分数并禁止同一事实重复扣分。默认规则不设置最低扣分：找不到明确问题时使用空扣分清单并获得满分，不得为了控制分布而虚构一般性不足。随后从同一证据包完成第二次盲评；超过 2 分的报告会标记“待裁决”，只有教师在页面确认当前分数后才能批准。默认上报成绩的全批平均分不低于 90；需要调整时系统使用最小统一加分，原始批改分仍保留可追溯。
 
@@ -77,13 +78,19 @@ Skill 默认采用整数分。模型不再凭整体印象选分数档，而是�
 
 仅文字模式仍会把 OCR 识别结果并入证据，但 OCR 不保留可靠的页面布局。默认评分表的 `hard_to_read` 档因此设有视觉扣分门槛：只有实际打开相关 PDF 页面并记录视觉核验页后才能选择。这个检查按扣分触发，不会要求逐份视觉复核整批报告。
 
-## 3. 选择报告检查模式
+## 3. 评分前选择报告检查模式
 
-- **仅检查文字**：默认模式，速度最快、Token 使用最少，适合正文可以正常复制的报告。
-- **智能检查**：读取文字，并查看与评分有关的重点截图、图表或扫描页面。
-- **完整检查**：检查全部文字和图片，适合主要内容都在截图或扫描页中的报告。
+目录和评分标准确认后、运行 `prepare` 之前，在对话中选择“仅文字 + OCR”“智能检查”或“完整视觉检查”。审核面板不提供此选择，因为它是在评分草稿生成后打开的。
 
-如果不确定，先使用“仅检查文字”。审核页面出现“文字过少”或“需要教师复核”时，再改用智能检查。
+### 强制核验最新稳定版本
+
+每批 `prepare` 都会在线查询 GitHub 上版本号最高的正式稳定 Release，并比对本机 Skill 版本、Git commit/文件树和当前评分标准文件哈希。未发布 tag、预发布版、`main` 和本地缓存都不能替代稳定版本。无法联网、仓库没有稳定 Release、代码或评分标准与稳定版本不一致时，流程会在创建批次文件前停止；不会自动覆盖或更新本机 Skill。先由维护者发布获批的 `vMAJOR.MINOR.PATCH` 稳定版本，再把 Skill 更新到该版本。可手动查看：
+
+```powershell
+python scripts/check_stable_version.py --rubric assets/rubrics/experiment-1-web-http.json --json
+```
+
+`prepare` 会再次强制核验，并把成功结果记录在暂存清单和 `批次信息.json`。安装包没有 Git 历史时，核验器会逐文件比对安装目录与 GitHub 稳定 tag；评分标准必须随稳定版本发布在 Skill 仓库内。详细规则见 [`references/stable-version-check.md`](references/stable-version-check.md)。
 
 ## 4. 在审核页面批改
 
@@ -98,12 +105,15 @@ Skill 默认采用整数分。模型不再凭整体印象选分数档，而是�
 页面中的主要操作：
 
 1. 在“实验报告文件夹”中输入路径，或从下拉列表选择实验文件夹。
-2. 从顶部或左侧列表选择学生，右侧可查看对应的源 PDF。
+2. 从左侧报告列表选择学生，右侧可查看对应的源 PDF。
 3. 检查总分和综合评语；需要时修改分项分数或评语。
 4. 点击“保存分数和评语”，保存草稿并更新 Excel，不修改 PDF。
-5. 确认无误后点击“批准并写回源 PDF”。系统会先备份原件，再写入一页精简反馈。
+5. 设置是否在原页添加手写评语、逐页画勾、加盖教师签名、手写成绩，并选择反馈页插入首页或追加末页。签名模板仍是批改前必须满足的固定条件；此处的签名开关只决定本份 PDF 是否实际加签。
+6. 点击“批准并直接写回 PDF”。确认对话框会显示学生、源 PDF 和写回选项；确认后系统先备份原件，再直接写回源 PDF，不再经过单独的预览页。
 
-连续批改时，可以启用“连续审核模式”。批准当前报告后，页面会自动切换到下一份未审核报告。
+审核中发现报告需要补交时，可点击“标记需重新提交”。旧评分会从成绩表和平均分中排除，面板会保留退回前的 PDF 与评分记录。学生补交 PDF 后，替换原文件并确认收到；面板显示“已重新提交”，可复制重新评分指令到当前 Codex 对话启动新一轮评分。Word 文件的预检状态也会在同一批次目录出现匹配 PDF 后显示为“已重新提交”。
+
+连续审批时，批准当前报告后页面会自动切换到下一份未审核报告；“连续审批 · 不再提示”开关仅用于跳过之后逐份出现的确认对话框。
 
 ## 5. 查看结果
 
@@ -157,8 +167,10 @@ Skill 默认采用整数分。模型不再凭整体印象选分数档，而是�
 - **Windows 上 OCR 前置检查不通过会直接停下**：Windows 没有 shim 生成器（辅助脚本是 bash），只走真实的 Tesseract。启用 OCR 时，`prepare` 要求 Tesseract（含 `chi_sim`、`eng`）与 `pdftoppm` 均可运行；否则在创建批次之前停止。先检查其他盘的已有安装或提供路径，不直接推断未安装。只有明确不使用 OCR 时才用 `--ocr-mode off` 绕过。
 - **OCR 要花时间，批次开始前请留出空档**：约 **2.5–3 秒/候选页**（本地 CPU，不消耗 API 费用）。实测 4 份报告 27 个候选页约 **80 秒**；70 份截图型报告首次准备可能 **20–30 分钟**。运行期间每份报告会打印一行 `[ocr] …` 进度，不是卡死。重复运行有缓存（约 0.5 秒），但执行 `clean` 会连同缓存一起删除。
 - 想换 OCR 引擎：`--ocr-engine rapidocr`（**默认**，中文截图召回更好）或 `--ocr-engine vision`（macOS 原生，快约 3 倍但密集界面截图错误较多）。默认的 `auto` 走的就是 rapidocr 那条 shim；Vision 需要显式指定，`--with-vision` 只是把它构建好待用。
-- **换机器或首次使用前，先跑一次自检**：`python3 scripts/batch_pipeline.py doctor`。它会逐项报出各个阶段需要的组件（写回 PDF 用的 `reportlab` / `PyMuPDF`、Excel 导出用的 `openpyxl`、签名模板、手写字体、Node、两个 OCR 程序与 `ocr engine` 等）是否就绪，**并注明每个路径是从哪一层找到的**（命令行参数 / 环境变量 / `config/local.json` / 技能自带资源 / 系统常见位置）。想顺带验证产物写出器，运行 `doctor --self-test`：它用合成评分数据在系统临时目录写出审核面板和 Excel，把嵌进面板的评语与批次提示读回来比对，并确认分数偏移确实改变了表格，不碰任何 PDF。**这些依赖里有几个是在最后一步才失败的**——特别是 `reportlab` 缺失时，要等到您审完全部报告、点"批准并写回源 PDF"那一刻才会报错。
-- **Excel 与审核面板不再依赖 Codex 运行时**：两者都由技能自带的 Python 写出器生成（Excel 用 `openpyxl`，面板是模板替换），已经没有 Node 写出器，也不再需要 `@oai/artifact-tool`。因此换到任何机器或宿主，成绩汇总表都照常生成。Node 现在只在启动交互审核服务时才需要——没有 Node 时批改、Excel 与写回仍然可用，只是要通过审核 JSON 或 `scripts/approve_batch.py` 完成批准。
-- **签名模板属于"每台机器自己配"的项目，不在包里**：老师的签名是个人笔迹，不随技能分发。首次在某台机器使用前，用 `python3 scripts/bootstrap.py` 看"per-machine assets"一节——未配置时它会标成 `BLOCK` 并以非零状态退出，`doctor` 也会报 `signature template`。四种配置方式（任选其一）：`--signature-pdf` 参数、`EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF` 环境变量、`bootstrap.py --write-config` 写入 `config/local.json`、或把模板 PDF 放到 `assets/signature/`（该目录已 gitignore，也不会被打进分发包）。未配置时**批改、审核、Excel 都照常**，只有在点"批准并写回源 PDF"时会明确拒绝，不会静默跳过签名。
+- **换机器或首次使用前，先跑一次自检**：`python3 scripts/batch_pipeline.py doctor`。它会逐项报出各阶段需要的组件（签名模板验证用的 `PyMuPDF`、写回 PDF 用的 `reportlab`、Excel 导出用的 `openpyxl`、签名模板、手写字体、Node、两个 OCR 程序与 `ocr engine` 等）是否就绪，**并注明每个路径是从哪一层找到的**（命令行参数 / 环境变量 / `config/local.json` / 技能自带资源 / 系统常见位置）。想顺带验证产物写出器，运行 `doctor --self-test`：它用合成评分数据在系统临时目录写出审核面板和 Excel，把嵌进面板的评语与批次提示读回来比对，并确认分数偏移确实改变了表格，不碰任何 PDF。`PyMuPDF` 和有效签名模板缺失会阻止 `prepare`；`reportlab` 缺失会阻止最终 PDF 写回。
+- **Excel 与审核面板不再依赖 Codex 运行时**：两者都由技能自带的 Python 写出器生成（Excel 用 `openpyxl`，面板是模板替换），已经没有 Node 写出器，也不再需要 `@oai/artifact-tool`。因此换到任何机器或宿主，成绩汇总表都照常生成。Node 仅用于启动交互审核服务；教师在面板逐份审核并点击“批准并直接写回 PDF”后，系统先备份原件再写回。
+
+- **评审面板复用模板**：面板的唯一静态来源是 `assets/review-panel-template.html`，由 `scripts/build_review_html.py` 注入批次数据生成。当前布局、状态筛选、补交流程、写回选项、PDF 展示、按钮错误提示及批次结束清理见 [`references/review-panel-template.md`](references/review-panel-template.md)。后续调整请改资产模板并重建面板，不要直接改批次输出的 HTML。
+- **教师签名属于"每台机器自己配"的项目，不在包里**：首次使用用 `python3 scripts/bootstrap.py` 查看状态。可配置带 Ink 的 PDF，或透明 PNG；支持 `--signature-file`、兼容参数 `--signature-pdf`、`EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE`（旧 `_SIGNATURE_PDF` 也兼容）、`config/local.json` 中的 `signature_file`，或放入 `assets/signature/`。`prepare` 会验证文件；图片只接受带透明通道的 PNG，写回时维持原图、不抠图不重绘，并在批准写回前检查签名区域遮挡。
 - **换机器要改的路径不必改代码**：签名模板、手写字体、解释器、Node、OCR 辅助程序都可按 `--参数` → `EXPERIMENT_REPORT_GRADER_*` 环境变量 → 技能目录下 `config/local.json`（从 `config/defaults.example.json` 复制）的顺序指定。迁移与自查清单见 `references/portability.md`，装包流程见本页开头「0. 在一台新机器上安装」。
-- **批准写回会在报告本身上留痕**：学生作业的每一页加一个红色勾（**"指导老师评议"页即签名页不打勾**，其后的"实验报告说明"样板页也不打勾）、把教师签名墨迹复制到签名栏、并把评定后的真实分数写进「成绩评定」栏（此前该栏是模板里固定的手写 `100`）。分数取的是**上报成绩**（本批次即调整后的最终分），与反馈页的「最终成绩」一致。写回前会逐份自检：勾的数量、分数与签名是否压到原有内容；不合格就拒绝写回。签名模板与手写字体默认按环境变量/`config/local.json`/系统位置解析（旧版是写死的绝对路径），可用 `--signature-pdf` / `--score-font` 覆盖。批量批准前可先用 `scripts/dry_run_annotation.py` 干跑一遍（只写临时目录，不碰源文件）。
+- **写回样式由教师逐份选择**：审核面板可选择原页手写分项评语、逐页画勾、教师签名、成绩栏手写分数，以及反馈页放首页或末页。点击“批准并直接写回 PDF”后，系统先备份原件再写回；签名文件仍须在批改前通过固定前置检查，签名开关只决定本次是否加签。可用 `--signature-file`（兼容 `--signature-pdf`）和 `--score-font` 覆盖配置。

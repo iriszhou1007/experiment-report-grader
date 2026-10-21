@@ -45,13 +45,14 @@ ENV_PREFIX = "EXPERIMENT_REPORT_GRADER_"
 # machine. It is now resolved only from the documented layers and reported unresolved otherwise.
 # Configure it with any of:
 #
-#   --signature-pdf /path/to/signature.pdf
-#   EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF=/path/to/signature.pdf
+#   --signature-pdf /path/to/signature.pdf  (or a transparent PNG)
+#   EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE=/path/to/signature.png
+#   EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF=/path/to/signature.pdf  (legacy variable; also accepts PNG)
 #   python3 scripts/bootstrap.py --write-config       # records the current value in config/local.json
 #   <skill>/assets/signature/signature.pdf            # drop it in the bundle for a one-machine setup
 #
 # A config/local.json entry looks like this (documentation, not a default):
-#   "signature_pdf": "~/Documents/教学/签名模板.pdf"
+#   "signature_file": "~/Documents/教学/签名.png"
 SIGNATURE_BUNDLE_RELATIVE = "assets/signature/signature.pdf"
 SIGNATURE_BUNDLE_DIR = "assets/signature"
 
@@ -180,14 +181,25 @@ def signature_candidates() -> tuple[Path, ...]:
     found = [SKILL_ROOT / SIGNATURE_BUNDLE_RELATIVE]
     bundle_dir = SKILL_ROOT / SIGNATURE_BUNDLE_DIR
     if bundle_dir.is_dir():
-        found.extend(sorted(path for path in bundle_dir.glob("*.pdf") if path.is_file()))
+        found.extend(sorted(path for path in bundle_dir.iterdir() if path.is_file() and path.suffix.lower() == ".pdf"))
+        found.extend(sorted(path for path in bundle_dir.iterdir() if path.is_file() and path.suffix.lower() == ".png"))
     return tuple(found)
 
 
 def resolve_signature_pdf(explicit: str | Path | None = None, config: dict | None = None) -> Resolution:
-    """Teacher-signature template for the approved write-back."""
-    return resolve(
+    """Resolve the teacher's PDF or transparent PNG signature asset (PDF config remains supported)."""
+    image_asset = resolve(
         explicit=explicit,
+        key="signature_file",
+        config=config,
+    )
+    if image_asset.ok or image_asset.source in {"flag", f"env:{ENV_PREFIX}SIGNATURE_FILE"}:
+        return image_asset
+    settings = load_local_config() if config is None else config
+    if settings.get("signature_file"):
+        return image_asset
+    return resolve(
+        explicit=None,
         key="signature_pdf",
         bundle_relative=SIGNATURE_BUNDLE_RELATIVE,
         candidates=signature_candidates(),
@@ -725,7 +737,7 @@ def portability_report() -> list[dict]:
     items = [
         ("python", "every phase", resolve_python()),
         ("node", "review panel service", resolve_node()),
-        ("signature template", "PDF write-back after approval", resolve_signature_pdf()),
+        ("teacher signature", "prepare (fixed grading precondition)", resolve_signature_pdf()),
         ("score font", "PDF write-back after approval", resolve_score_font()),
         ("tesseract", "prepare (local OCR)", resolve_ocr_program("tesseract")),
         ("pdftoppm", "prepare (local OCR)", resolve_ocr_program("pdftoppm")),

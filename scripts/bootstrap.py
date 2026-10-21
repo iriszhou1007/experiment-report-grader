@@ -42,8 +42,9 @@ DEPENDENCIES = {
     "reportlab": "reportlab",
     "fitz": "PyMuPDF",
 }
-# Needed by the approved write-back; a batch can otherwise be reviewed in full before these matter.
-WRITEBACK_ONLY = {"reportlab", "fitz"}
+# fitz is needed during prepare to validate the mandatory signature template. reportlab is only
+# needed when an approved review is written back to its source PDF.
+WRITEBACK_ONLY = {"reportlab"}
 
 
 def missing_dependencies(python: Path) -> list[str]:
@@ -130,7 +131,7 @@ def write_local_config(dry_run: bool) -> dict:
     entries = {
         "python": resolve_env.resolve_python(),
         "node": resolve_env.resolve_node(),
-        "signature_pdf": resolve_env.resolve_signature_pdf(),
+        "signature_file": resolve_env.resolve_signature_pdf(),
         "score_font": resolve_env.resolve_score_font(),
         "ocr_executable": resolve_env.resolve_ocr_program("tesseract"),
         "pdftoppm_executable": resolve_env.resolve_ocr_program("pdftoppm"),
@@ -153,19 +154,18 @@ def write_local_config(dry_run: bool) -> dict:
 def machine_assets() -> list[dict]:
     """Per-machine items this skill deliberately does not ship.
 
-    ``reportlab`` is not the only thing that fails at the very end: the write-back also needs the
-    teacher's signature template and a handwriting face, and OCR needs its helpers. Those are
-    configuration rather than dependencies, so they are reported by name with the layer that
-    answered and the ways to supply them. A machine that will grade a batch happily and then refuse
-    to write it back should say so up front, not after the whole batch has been reviewed.
+    The teacher's signature template is required before any grading batch, while the handwriting
+    face and reportlab are only needed for approved write-back, and OCR needs its helpers. The
+    machine-specific assets are reported by name with the layer that answered and ways to supply
+    them, so setup failures are visible before grading starts.
     """
     items = (
         (
-            "signature template",
+            "teacher signature (PDF or transparent PNG)",
             resolve_env.resolve_signature_pdf(),
             True,
-            "pass --signature-pdf, set EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF, run "
-            "bootstrap.py --write-config, or place a PDF at assets/signature/signature.pdf",
+            "pass --signature-file/--signature-pdf, set EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE, run "
+            "bootstrap.py --write-config, or place a PDF or transparent PNG in assets/signature/",
         ),
         (
             "score font",
@@ -337,8 +337,8 @@ def main() -> int:
             print(f"  doctor: {'ok' if report['doctor']['ok'] else 'missing ' + str(report['doctor']['missing'])}")
         if unresolved_critical:
             print(
-                "  NOTE: the write-back needs the items marked BLOCK. Grading, review and Excel "
-                "work without them; approving a report will fail until they are configured."
+                "  NOTE: a usable signature template is required before grading. Other BLOCK "
+                "write-back assets may still prevent PDF mutation after review."
             )
     return 0 if report["ok"] else 1
 

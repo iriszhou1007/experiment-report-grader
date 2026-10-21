@@ -22,6 +22,7 @@ import fitz
 from review_marking import (
     DEFAULT_SCORE_FONT,
     copy_signature_ink,
+    copy_signature_image,
     draw_review_checkmark,
     find_review_page,
     make_page_rng,
@@ -41,9 +42,9 @@ def parse_args() -> argparse.Namespace:
         help="score text to write into 成绩评定, e.g. 94",
     )
     parser.add_argument(
-        "--signature-pdf",
+        "--signature-pdf", "--signature-file", dest="signature_pdf",
         type=Path,
-        help="template PDF whose teacher-signature ink is copied onto the review page",
+        help="teacher signature: annotated PDF or tightly cropped transparent PNG",
     )
     parser.add_argument(
         "--signature-page",
@@ -91,19 +92,31 @@ def main() -> None:
         ]
 
         copied_signature = 0
+        signature_image_rect = None
         if not args.no_signature:
-            copied_signature = copy_signature_ink(
-                args.signature_pdf.resolve(),
-                document,
-                target_page_index=review_page_index,
-                source_page_index=(args.signature_page - 1) if args.signature_page else None,
-            )
-            if copied_signature == 0:
-                raise SystemExit(
-                    f"No teacher-signature ink found in {args.signature_pdf} "
-                    "near the 指导教师签名 label"
+            signature_path = args.signature_pdf.resolve()
+            if signature_path.suffix.lower() == ".png":
+                _score_rect, signature_label_rect = review_label_rects(document, review_page_index)
+                signature_image_rect = copy_signature_image(
+                    signature_path, document[review_page_index], signature_label_rect
                 )
+            else:
+                copied_signature = copy_signature_ink(
+                    signature_path,
+                    document,
+                    target_page_index=review_page_index,
+                    source_page_index=(args.signature_page - 1) if args.signature_page else None,
+                )
+            if copied_signature == 0:
+                if signature_image_rect is None:
+                    raise SystemExit(
+                        f"No teacher-signature ink found in {args.signature_pdf} "
+                        "near the 指导教师签名 label"
+                    )
         summary["signature_ink_annotations"] = copied_signature
+        if signature_image_rect is not None:
+            summary["signature_image_rect"] = [round(value, 2) for value in signature_image_rect]
+            summary["signature_image_count"] = 1
 
         if not args.no_score:
             review_page = document[review_page_index]

@@ -56,6 +56,8 @@ REQUIRED_IN_ARCHIVE = (
     "skill.json",
     "README.md",
     "scripts/batch_pipeline.py",
+    "scripts/check_stable_version.py",
+    "scripts/submission_preflight.py",
     "scripts/bootstrap.py",
     "scripts/export_scores.py",
     "scripts/build_review_html.py",
@@ -78,6 +80,7 @@ REQUIRED_IN_ARCHIVE = (
     "assets/review-panel-template.html",
     "config/defaults.example.json",
     "references/portability.md",
+    "references/stable-version-check.md",
     "references/experiment-1-web-http.md",
     "agents/openai.yaml",
 )

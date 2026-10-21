@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
-"""Approve a reviewed batch and write the result back into every source PDF.
+"""Legacy batch-writeback planner.
 
-This is the batch counterpart of the review panel's per-report approval. It deliberately does
-no PDF work of its own: each report goes through the same ``insert_feedback_page.py`` the panel
-calls, so the feedback sheet, the checkmarks, the signature, the score and the built-in
-verification cannot drift between the two paths.
-
-``finalize`` refuses to run once a review is approved, so the review artifacts (HTML, Excel,
-index.md) are regenerated here at the end, mirroring what the panel does after a save.
-
-Safety properties:
-* every write is generated from the immutable original under 原始数据/, never from a PDF that
-  has already been written back
-* the original is copied to 原始数据/ before the first write, and that backup is verified
-  against the hash recorded at grading time
-* the output replaces the source atomically, via a same-directory rename
+The command retains its dry-run report, but actual batch write-back is disabled. The interactive
+review panel must show the final annotated PDF and collect explicit per-report approval first.
 """
 
 from __future__ import annotations
@@ -34,9 +22,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 WRITE_BACK = SCRIPT_DIR / "insert_feedback_page.py"
 # Both artifacts come from this skill's own Python writers. The Node pair that used to be called
 # here needed @oai/artifact-tool (which ships only inside the Codex runtime) for the workbook and
-# Node itself for the panel, so "approve a whole batch without the panel" was impossible on every
-# other host: the panel step failed outright without Node, and the workbook was skipped silently
-# unless --spreadsheet-modules was passed.
+# Node itself for the panel; these paths remain for the legacy dry-run planner only.
 HTML_BUILDER = SCRIPT_DIR / "build_review_html.py"
 SPREADSHEET_EXPORTER = SCRIPT_DIR / "export_scores.py"
 MATERIALIZER = SCRIPT_DIR / "materialize_reviews.py"
@@ -46,9 +32,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--review-dir", type=Path, required=True)
     parser.add_argument(
-        "--signature-pdf",
+        "--signature-pdf", "--signature-file", dest="signature_pdf",
         type=Path,
-        help="teacher signature template; defaults to the write-back script's own default",
+        help="teacher signature PDF or transparent PNG; defaults to the write-back script's setting",
     )
     parser.add_argument("--score-font", type=Path)
     parser.add_argument("--seed", type=int, help="seed for reproducible checkmark variation")
@@ -199,6 +185,8 @@ def write_back_report(
         "total_pages": summary.get("total_pages"),
         "score_written": (annotation.get("score") or {}).get("score_text"),
         "signature_ink_annotations": annotation.get("signature_ink_annotations"),
+        "signature_image_count": annotation.get("signature_image_count"),
+        "signature_image_rect": annotation.get("signature_image_rect"),
         "checkmarked_pages": len(annotation.get("checkmarked_pages") or []),
         "unmarked_pages": annotation.get("unmarked_pages"),
         "seed": annotation.get("seed"),
@@ -238,6 +226,11 @@ def rebuild_artifacts(args: argparse.Namespace, review_dir: Path) -> dict:
 
 def main() -> int:
     args = parse_args()
+    if not args.dry_run:
+        raise SystemExit(
+            "Non-interactive batch write-back is disabled because it cannot show and confirm "
+            "the final annotated PDF. Approve each report in the local review panel instead."
+        )
     review_dir = args.review_dir.resolve()
     output_dir = review_dir.parent
     # Keep scratch inside the skill's own tmp namespace, alongside the batch work directory.

@@ -1,25 +1,34 @@
 # Approved PDF write-back
 
-Prerequisites: `scripts/insert_feedback_page.py` needs `reportlab`, `pypdf` and `PyMuPDF` (`fitz`) in the Python that runs it, plus the teacher-signature template and a handwriting font. A missing dependency surfaces only when the instructor approves a report — after the whole batch has been reviewed — so check everything up front with `python3 scripts/batch_pipeline.py doctor`, or install with `python3 -m pip install reportlab pypdf PyMuPDF`.
+Prerequisites: `scripts/insert_feedback_page.py` needs `reportlab`, `pypdf` and `PyMuPDF` (`fitz`) in the Python that runs it, plus the teacher's signature asset and a handwriting font. The asset may be an annotated PDF or a tightly cropped transparent PNG. A usable signature asset is a fixed prerequisite for grading: `prepare` validates it before creating the batch. For PNGs the image is placed unchanged in the signature field, and the output verifier checks the field for overlap. `PyMuPDF` is needed during preparation; `reportlab` and the handwriting font are needed for approved write-back. Check everything with `python3 scripts/batch_pipeline.py doctor`, or install with `python3 -m pip install reportlab pypdf PyMuPDF`.
 
 The local review service may write feedback only after explicit approval of the exact report or clearly identified batch.
 
 1. Verify the review is still approved and its immutable source hash matches the current source before first write-back, or the stored original backup on later write-backs.
 2. Create or verify one byte-for-byte original under `<batch-folder>/原始数据/`.
-3. Run `scripts/insert_feedback_page.py` with the explicit approval flag. Generate from the immutable original, never from a previously written-back PDF.
-4. Smoke-render and reopen the result. Verify original pages remain in order and exactly one current feedback page exists.
-5. Atomically replace the corresponding source PDF, then regenerate Excel and HTML from approved review JSON. `index.md` is refreshed in the same step (`materialize_reviews.py --index-only`) — otherwise it is only rewritten by `finalize` and would keep reporting 待审核 while the workbook already says 已审核.
+3. Before approval, select whether to add handwritten comments to student pages, draw page checkmarks, apply the teacher signature, and handwrite the score. The signature asset remains a fixed precondition checked during preparation; the per-report signature switch only controls whether it is applied. Select whether the feedback sheet goes first or last.
+4. After the teacher reviews the score and comments, show the selected write-back settings and ask for explicit confirmation naming the student and source PDF.
+5. On confirmation, generate the output from the immutable original, validate it, and replace the source PDF atomically. Do not require a separate PDF preview step.
+6. Smoke-render and reopen the result. Verify original pages remain in order and exactly one current feedback page exists.
+7. Regenerate Excel and HTML from approved review JSON. `index.md` is refreshed in the same step (`materialize_reviews.py --index-only`) — otherwise it is only rewritten by `finalize` and would keep reporting 待审核 while the workbook already says 已审核.
 
 ## What a write-back puts on the page
 
-Two things happen, in this order, both from the immutable original:
+The teacher selects which marks to apply. The options are:
+
+- optional handwritten item comments on cited student pages; placement is limited to verified blank margins, and generation stops if a comment would overlap existing page content or cannot fit
+- optional red checkmarks on student-work pages before the 指导老师评议 page
+- optional teacher signature from the preflight-validated fixed asset
+- optional handwritten reported score in the 成绩评定 field
+
+The selected marks are applied to the immutable original before the feedback sheet is joined at the selected end:
 
 **Review marks** (`scripts/review_marking.py`, plus `scripts/annotate_report_pdf.py` for standalone use). Ported from [jamesz-dev/hw-worker](https://github.com/jamesz-dev/hw-worker):
 
-- one red checkmark on every page of student work **before** the 指导老师评议 page. That page is the signature page: it carries the score and the signature, not reviewed work, so it stays unmarked. In all 62 reports of the 实验4 batch the review page is the last page of student work, and the page after it is the 实验报告说明 boilerplate — that boilerplate is unmarked too.
+- when enabled, one red checkmark on every page of student work **before** the 指导老师评议 page. That page is the signature page: it carries the score and the signature, not reviewed work, so it stays unmarked. In all 62 reports of the 实验4 batch the review page is the last page of student work, and the page after it is the 实验报告说明 boilerplate — that boilerplate is unmarked too.
 - its two bezier arms vary in size, proportion, angle, stroke width and colour, seeded from `--seed`, so a batch does not look mechanically stamped
-- the teacher's signature, copied as an `Ink` annotation from the template PDF and translated to sit after the `指导教师签名：` label, on the review page
-- the graded score, written after `成绩评定：` on the same page, in a handwriting face, in the same pen colour as the template's ink
+- when enabled, the teacher's signature, copied as an `Ink` annotation from the template PDF and translated to sit after the `指导教师签名：` label, on the review page
+- when enabled, the graded score, written after `成绩评定：` on the same page, in a handwriting face, in the same pen colour as the template's ink
 
 ### Checkmark variation
 
@@ -47,21 +56,21 @@ A form whose labels cannot be found raises instead of guessing: marking a guesse
 - each promised page gained exactly one checkmark, and no unmarked page gained any — counted by grouping red bezier paths in the safe zone. A pixel diff cannot decide this: many of these reports are scans where a third of the page is already dark, so a red check drawn over that content changes no pixel classification at all. Only curves are counted, because the signature is also red ink and can land inside the safe zone.
 - the score box and the signature box intersect no pre-existing text or image box on the review page. A pixel overlap test would pass trivially on a dense scan, since ink drawn over dark ink adds no new pixels.
 
-`scripts/annotate_report_pdf.py` additionally reports `seed`, `review_page`, `checkmarked_pages`, `unmarked_pages`, `signature_ink_annotations`, and the score placement (`score_rect`, `score_font_size`, `score_placement`, `cap_height_ratio`), so any result can be re-derived later.
+`scripts/annotate_report_pdf.py` additionally reports `seed`, `review_page`, `checkmarked_pages`, `unmarked_pages`, either `signature_ink_annotations` (PDF) or `signature_image_rect`/`signature_image_count` (PNG), and the score placement (`score_rect`, `score_font_size`, `score_placement`, `cap_height_ratio`), so any result can be re-derived later.
 
 ## The feedback sheet
 
-The feedback sheet goes **first**, as page 1, so a student opening the file sees the result immediately. Original pages keep their content and relative order but every one of them shifts down by one position: a page the grading packet called p.7 becomes page 8. Evidence page numbers in the review JSON always refer to the original report, which is also why `原始数据/` keeps the untouched original. The review page the checkmark stopped at is reported as `review_page_in_output`.
+The feedback sheet can go **first** or **last**. The selected position determines whether the feedback sheet is inserted first or appended last. Original pages keep their content and relative order. When inserted first, original page numbers shift down by one; when appended last, they do not. Evidence page numbers in the review JSON always refer to the original report, which is also why `原始数据/` keeps the untouched original. The review page is reported as `review_page_in_output`.
 
 The sheet contains only student identity, the score, item scores, and the overall comment. Exclude hashes, warnings, evidence lists, and approval metadata. Editing an approved draft returns it to draft and requires approval again.
 
 When a course-level offset is in effect the sheet prints 「批改得分」 and 「最终成绩」 together, with the adjustment named (`课程统一调整（+5，上限 100）`) and a line noting that the item scores above sum to the graded score. Printing only the graded figure would contradict the grade the student is officially given; printing only the adjusted figure would leave the item scores adding up to a smaller number with no explanation. Without an offset the sheet still shows a single 「总分」 line. The total is always the raw `total_score` for validation purposes: item scores must sum to it.
 
-Page-count expectations when approving: `insert_feedback_page.py` reports `source_pages`, `feedback_pages`, `feedback_page`, and `total_pages`, so a write-back is verifiable as exactly one added page at position 1.
+Page-count expectations when approving: `insert_feedback_page.py` reports `source_pages`, `feedback_pages`, `feedback_page`, `feedback_position`, and `total_pages`, so a write-back is verifiable as exactly one added feedback page at the selected end.
 
 ## Options
 
-- `--signature-pdf` — template holding the signature ink (default `scripts/writeback_paths.py: DEFAULT_SIGNATURE_PDF`)
+- `--signature-file` (alias `--signature-pdf`) — annotated PDF or transparent PNG signature asset (default `scripts/writeback_paths.py: DEFAULT_SIGNATURE_PDF`)
 - `--score-font` — handwriting face for the score (default Bradley Hand Bold)
 - `--seed` — makes the checkmark variation reproducible; the same seed reproduces a batch exactly
 - `--no-review-marks` — prepend the feedback sheet only, without checkmarks, signature or score

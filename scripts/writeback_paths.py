@@ -21,9 +21,8 @@ from resolve_env import SKILL_ROOT, SIGNATURE_BUNDLE_RELATIVE, resolve_score_fon
 SIGNATURE_PDF_RESOLUTION = resolve_signature_pdf()
 SCORE_FONT_RESOLUTION = resolve_score_font()
 
-# Teacher-signature template: a PDF carrying the signature as an Ink annotation next to the
-# 指导教师签名 label. Override with --signature-pdf, EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF, or
-# config/local.json ("signature_pdf").
+# Teacher-signature asset: an annotated PDF or transparent PNG. Override with --signature-file
+# (legacy --signature-pdf also works), EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE, or config/local.json.
 DEFAULT_SIGNATURE_PDF = str(
     SIGNATURE_PDF_RESOLUTION.value or (SKILL_ROOT / SIGNATURE_BUNDLE_RELATIVE)
 )

@@ -1,17 +1,19 @@
 {
   "name": "experiment-report-grader",
-  "skill_version": "1.6.3",
-  "pipeline_version": "1.9",
+  "skill_version": "1.7.0",
+  "pipeline_version": "2.0.0",
+  "repository": "https://github.com/iriszhou1007/experiment-report-grader",
   "description": "Batch-grade PDF laboratory reports against a confirmed rubric, review them locally, and write approved feedback back into the source PDFs.",
   "entry": "SKILL.md",
   "requires": {
-    "python_modules": ["pypdf", "PIL"],
-    "python_modules_for_writeback": ["reportlab", "fitz"],
+    "python_modules": ["pypdf", "PIL", "fitz"],
+    "python_modules_for_writeback": ["reportlab"],
     "python_modules_for_artifacts": ["openpyxl"],
     "external_optional": ["tesseract", "pdftoppm"],
     "external_for_review_panel": ["node"]
   },
   "external_paths": [
+    "signature_file",
     "signature_pdf",
     "score_font",
     "python",

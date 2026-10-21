@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--skill", type=Path, required=True)
     parser.add_argument("--reports", type=Path, required=True)
     parser.add_argument("--review-dir", type=Path, required=True)
-    parser.add_argument("--signature-pdf", type=Path, required=True)
+    parser.add_argument("--signature-pdf", "--signature-file", dest="signature_pdf", type=Path, required=True)
     parser.add_argument("--validator", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--seed", type=int, default=20260407)
@@ -112,7 +112,9 @@ def main() -> int:
                 "signature_obstacles_hit": [
                     entry["obstacles_hit"] for entry in report.get("signature", [])
                 ],
+                "signature_image_obstacles_hit": report.get("signature_image", {}).get("obstacles_hit"),
                 "signature_ink_annotations": summary["signature_ink_annotations"],
+                "signature_image_count": summary.get("signature_image_count", 0),
             }
         )
 
@@ -163,9 +165,14 @@ def main() -> int:
         print("分数障碍命中总和:", sum(row["score_obstacles_hit"] for row in rows))
         print(
             "签名障碍命中总和:",
-            sum(sum(row["signature_obstacles_hit"]) for row in rows),
+            sum(
+                sum(row["signature_obstacles_hit"])
+                + (row["signature_image_obstacles_hit"] or 0)
+                for row in rows
+            ),
         )
         print("签名墨迹数分布:", dict(collections.Counter(row["signature_ink_annotations"] for row in rows)))
+        print("签名图片数分布:", dict(collections.Counter(row["signature_image_count"] for row in rows)))
     print()
     print("--- 第三方验收器非 PASS 行 ---")
     for line, count in validator_lines.most_common(10):

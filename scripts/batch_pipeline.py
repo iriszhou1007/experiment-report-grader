@@ -19,11 +19,13 @@ from pathlib import Path
 
 import prepare_grading_packet as packet_tools
 import resolve_env
+from check_stable_version import verify_stable_version
+from submission_preflight import scan as scan_submission_folder
 from materialize_reviews import BATCH_LEVEL_WARNINGS, WARNING_LABELS as BATCH_LEVEL_LABELS, normalized_rubric
 from scoring_policy import calculate_deduction_scores, minimum_offset_for_average, score_distribution, uses_deduction_policy
 
 
-PIPELINE_VERSION = "1.9"
+PIPELINE_VERSION = "2.0.0"
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 # Scratch space and the batch work directories live under the workspace, which defaults to the
@@ -364,6 +366,8 @@ def compatible_batch_settings(
     full_evidence: bool = False,
     reproducibility_check: bool = True,
     max_regrade_delta: float = 2.0,
+    stable_tag: str = "",
+    stable_commit: str = "",
 ) -> bool:
     if not previous:
         return True
@@ -386,6 +390,10 @@ def compatible_batch_settings(
     if int(previous.get("max_report_chars", 4000)) != max_report_chars:
         return False
     if previous.get("pipeline_version") and str(previous.get("pipeline_version")) != PIPELINE_VERSION:
+        return False
+    if str(previous.get("stable_tag", "")) != stable_tag:
+        return False
+    if str(previous.get("stable_commit", "")) != stable_commit:
         return False
     if abs(float(previous.get("score_increment", 1)) - score_increment) > 1e-9:
         return False
@@ -450,13 +458,97 @@ def require_ocr_on_windows(args: argparse.Namespace) -> None:
         setattr(args, key, value)
 
 
+def require_signature_template() -> str:
+    """Fail before creating batch outputs unless the configured teacher signature is usable."""
+    resolution = resolve_env.resolve_signature_pdf()
+    if not resolution.ok or resolution.value is None:
+        raise RuntimeError(
+            "A teacher signature file is required before grading. Configure "
+            "EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE (PDF or transparent PNG) or config/local.json, then retry. "
+            f"Resolver detail: {resolution.detail or 'not found'}"
+        )
+    signature_path = Path(resolution.value).expanduser().resolve()
+    if not signature_path.is_file():
+        raise RuntimeError(f"Teacher signature file is not readable: {signature_path}")
+    try:
+        import fitz
+
+        if str(SCRIPT_DIR) not in sys.path:
+            sys.path.insert(0, str(SCRIPT_DIR))
+        from review_marking import (
+            copy_signature_ink,
+            copy_signature_image,
+            find_review_page,
+            is_signature_image,
+            validate_signature_image,
+        )
+
+        if is_signature_image(signature_path):
+            validate_signature_image(signature_path)
+            # A synthetic page proves there is room to place the signature without modifying
+            # any student report; actual overlap is checked during approved PDF write-back.
+            with fitz.open() as synthetic:
+                page = synthetic.new_page(width=595, height=842)
+                label = fitz.Rect(360, 408, 430, 426)
+                copy_signature_image(signature_path, page, label)
+        elif signature_path.suffix.lower() == ".pdf":
+            with fitz.open(signature_path) as document:
+                if document.page_count < 1:
+                    raise ValueError("PDF has no pages")
+                page_index = find_review_page(document)
+                copied = copy_signature_ink(
+                    signature_path, document, target_page_index=page_index, source_page_index=page_index
+                )
+                if copied < 1:
+                    raise ValueError("no teacher signature ink found beside the signature label")
+        else:
+            raise ValueError("supported signature formats are annotated PDF and transparent PNG")
+    except Exception as exc:
+        raise RuntimeError(
+            f"Teacher signature file is not usable for grading: {signature_path}: {exc}"
+        ) from exc
+    return file_sha256(signature_path)
+
+
 def prepare_batch(args: argparse.Namespace) -> dict:
     report_dir = Path(args.report_dir).resolve()
     if not report_dir.is_dir():
         raise ValueError(f"Report directory does not exist: {report_dir}")
-    pdfs = sorted(path for path in report_dir.glob("*.pdf") if path.is_file())
+    all_pdfs = sorted(path for path in report_dir.iterdir() if path.is_file() and path.suffix.casefold() == ".pdf")
+    word_files = sorted(
+        path for path in report_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in {".doc", ".docx"}
+    )
+    preflight = scan_submission_folder(report_dir)
+    eligible_pdf_names = {
+        entry["file"] for entry in preflight["entries"]
+        if entry["file_type"] == "PDF" and entry["included_in_grading"]
+    }
+    pdfs = [path for path in all_pdfs if path.name in eligible_pdf_names]
     if not pdfs:
-        raise ValueError("No PDF files found directly inside the report directory")
+        rejected = [entry for entry in preflight["entries"] if not entry["included_in_grading"]]
+        if rejected:
+            details = "；".join(
+                f"{entry['file']}（{entry['status']}；"
+                f"{entry['student_name'] or '姓名未识别'} / {entry['student_id'] or '学号未识别'}）"
+                for entry in rejected
+            )
+            raise ValueError(
+                "报告目录中没有符合前置条件的 PDF，当前不能开始评分。预检结果："
+                f"{details}。请按提示补交 PDF 或规范文件名后再继续。"
+            )
+        raise ValueError("报告目录中没有可处理的 PDF、DOC 或 DOCX 文件，无法开始评分。")
+
+    detected_topics = sorted(topic for topic in preflight["experiment_groups"] if topic)
+    if len(detected_topics) > 1:
+        details = "; ".join(
+            f"{topic}: {', '.join(preflight['experiment_groups'][topic][:5])}"
+            for topic in detected_topics
+        )
+        raise ValueError(
+            "报告文件名显示多个实验主题，当前不能开始评分。请按主题拆分报告目录，"
+            f"或先确认本批次主题后再继续：{details}"
+        )
 
     saved_settings = discover_saved_settings(report_dir)
     explicit_settings = {
@@ -497,6 +589,17 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         if value is None and saved_settings.get(name) is not None
     }
 
+    saved_rubric = str(saved_settings.get("rubric_path", "")).strip()
+    rubric_path = Path(args.rubric or (saved_rubric if saved_rubric and Path(saved_rubric).is_file() else DEFAULT_RUBRIC)).resolve()
+    rubric_id, rubric_items, maximum, rubric_hash = rubric_signature(rubric_path)
+    stable_version_check = verify_stable_version(
+        SKILL_DIR, rubric_path, rubric_id=rubric_id, rubric_sha256=rubric_hash,
+    )
+
+    # This is a fixed gate for every batch, even when this particular task will not write back.
+    # Validate it before creating result/work directories so a blocked batch leaves no artifacts.
+    signature_sha256 = require_signature_template()
+
     # Windows requires runnable Tesseract+languages and Poppler. Fail here,
     # before any of the work below, rather than grading a batch without OCR.
     require_ocr_on_windows(args)
@@ -509,9 +612,6 @@ def prepare_batch(args: argparse.Namespace) -> dict:
     review_dir.mkdir(parents=True, exist_ok=True)
     backup_dir.mkdir(parents=True, exist_ok=True)
 
-    saved_rubric = str(saved_settings.get("rubric_path", "")).strip()
-    rubric_path = Path(args.rubric or (saved_rubric if saved_rubric and Path(saved_rubric).is_file() else DEFAULT_RUBRIC)).resolve()
-    rubric_id, rubric_items, maximum, rubric_hash = rubric_signature(rubric_path)
     batch_info_path = result_dir / "批次信息.json"
     previous_batch = read_json(batch_info_path) if batch_info_path.is_file() else None
     settings_match = compatible_batch_settings(
@@ -527,6 +627,8 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         bool(args.full_evidence),
         bool(args.reproducibility_check),
         float(args.max_regrade_delta),
+        str(stable_version_check["stable_tag"]),
+        str(stable_version_check["stable_commit"]),
     )
 
     work_dir = Path(args.work_dir).resolve() if args.work_dir else (
@@ -548,6 +650,25 @@ def prepare_batch(args: argparse.Namespace) -> dict:
             pending_paths.append(source)
             continue
         review_path, review = entry
+        if source_hash.lower() != str(review.get("source_sha256", "")).lower():
+            # A replacement PDF needs fresh evidence and fresh decisions; an old decision
+            # file is keyed by filename and would otherwise be silently reused.
+            saved_decisions.pop(source.name.lower(), None)
+        if review.get("submission_status") == "resubmission_required":
+            blocked.append({
+                "source_name": source.name,
+                "review_file": review_path.name,
+                "status": "resubmission_required",
+                "reason": "waiting_for_student_resubmission",
+            })
+            continue
+        if review.get("submission_status") == "resubmitted":
+            # Receipt is explicitly confirmed by the teacher in the review panel. Always
+            # create fresh grading evidence after that confirmation, even if the replacement
+            # PDF happens to have the same bytes as the returned copy.
+            saved_decisions.pop(source.name.lower(), None)
+            pending_paths.append(source)
+            continue
         can_reuse, reason = reusable_review(
             review,
             source,
@@ -761,6 +882,9 @@ def prepare_batch(args: argparse.Namespace) -> dict:
     })
     manifest = {
         "pipeline_version": PIPELINE_VERSION,
+        "stable_tag": stable_version_check["stable_tag"],
+        "stable_commit": stable_version_check["stable_commit"],
+        "stable_version_check": stable_version_check,
         "created_at": now_iso(),
         "batch_id": batch_id,
         "report_dir": str(report_dir),
@@ -778,6 +902,7 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         "rubric": read_json(rubric_path),
         "rubric_path": str(rubric_path),
         "rubric_sha256": rubric_hash,
+        "signature_template_sha256": signature_sha256,
         "pending_reports": manifest_reports,
         "reused_reports": reusable,
         "blocked_reports": blocked,
@@ -794,7 +919,11 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         "batch_name": batch_id,
         "report_dir": str(report_dir),
         "pdf_count": len(pdfs),
+        "submitted_pdf_count": len(all_pdfs),
         "pdf_files": [path.name for path in pdfs],
+        "unsupported_word_files": [path.name for path in word_files],
+        "submission_preflight": preflight["entries"],
+        "detected_experiment_labels": detected_topics,
         "inspection_mode": args.inspection_mode,
         "auto_upgrade_visual": bool(args.auto_upgrade_visual),
         "ocr_mode": args.ocr_mode,
@@ -807,7 +936,11 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         "rubric_id": rubric_id,
         "rubric_path": str(rubric_path),
         "rubric_sha256": rubric_hash,
+        "signature_template_sha256": signature_sha256,
         "pipeline_version": PIPELINE_VERSION,
+        "stable_tag": stable_version_check["stable_tag"],
+        "stable_commit": stable_version_check["stable_commit"],
+        "stable_version_check": stable_version_check,
         "work_dir": str(work_dir),
         "pending_count": len(pending_reports),
         "reused_count": len(reusable),
@@ -820,10 +953,14 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         "phase": "prepare",
         "batch_id": batch_id,
         "reports": len(pdfs),
+        "unsupported_word_files": [path.name for path in word_files],
+        "submission_preflight": preflight["entries"],
+        "detected_experiment_labels": detected_topics,
         "pending": len(pending_reports),
         "reused": len(reusable),
         "blocked": len(blocked),
         "chunks": len(chunks),
+        "stable_version_check": stable_version_check,
         "work_dir": str(work_dir),
         "manifest": str(manifest_path),
         "inputs": [chunk["input_file"] for chunk in chunk_records],
@@ -895,6 +1032,7 @@ def build_review_artifacts(
     workbook_path: Path,
     work_dir: Path,
     notices: list[str] | None = None,
+    preflight: list[dict] | None = None,
 ) -> dict:
     """Write the HTML panel and the Excel workbook with this skill's own Python writers.
 
@@ -907,10 +1045,14 @@ def build_review_artifacts(
     """
     interpreter = resolve_env.resolve_python().value or Path(sys.executable)
     notice_args = []
-    if notices:
+    if notices or preflight:
         notice_path = work_dir / "batch-notices.json"
-        write_json(notice_path, {"batch_notices": notices})
+        write_json(notice_path, {"batch_notices": notices or []})
         notice_args = [str(notice_path)]
+    if preflight:
+        preflight_path = work_dir / "submission-preflight.json"
+        write_json(preflight_path, {"entries": preflight})
+        notice_args.append(str(preflight_path))
     run_checked([
         str(interpreter),
         str(SCRIPT_DIR / "build_review_html.py"),
@@ -1303,6 +1445,7 @@ def finalize_batch(args: argparse.Namespace) -> dict:
         workbook_path=workbook_path,
         work_dir=work_dir,
         notices=batch_notices,
+        preflight=read_json(Path(manifest["result_dir"]) / "批次信息.json").get("submission_preflight", []),
     )
 
     regrade_audit_path = None
@@ -1783,21 +1926,19 @@ def batch_doctor(args: argparse.Namespace) -> dict:
          if sys.platform == "win32" else "python3 scripts/bootstrap.py --ocr"),
     )
 
-    # The write-back stamps the teacher's signature and the score into every approved report,
-    # so both the template and the handwriting face have to be present before review starts.
-    # Each is reported with the layer that answered, because "it works on my machine" is
-    # exactly the failure this section exists to catch.
+    # The signature template is required for prepare; the handwriting face is required for
+    # approved PDF write-back. Each is reported with the layer that answered.
     from writeback_paths import SCORE_FONT_RESOLUTION, SIGNATURE_PDF_RESOLUTION
 
     record(
-        "signature template",
-        "PDF write-back after approval",
+        "teacher signature",
+        "prepare (fixed grading precondition)",
         SIGNATURE_PDF_RESOLUTION.ok,
         f"{SIGNATURE_PDF_RESOLUTION.value} [{SIGNATURE_PDF_RESOLUTION.source}]"
         if SIGNATURE_PDF_RESOLUTION.ok
         else f"unresolved ({SIGNATURE_PDF_RESOLUTION.detail})",
-        "pass --signature-pdf, set EXPERIMENT_REPORT_GRADER_SIGNATURE_PDF, or add "
-        '"signature_pdf" to config/local.json',
+        "pass --signature-file/--signature-pdf, set EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE, or add "
+        '"signature_file" to config/local.json',
     )
     record(
         "score font",

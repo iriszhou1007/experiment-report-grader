@@ -7,6 +7,8 @@ import argparse
 import json
 import math
 import re
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 from scoring_policy import calculate_deduction_scores, uses_deduction_policy
@@ -307,7 +309,9 @@ def write_index(output_dir: Path, out_path: Path | None = None) -> Path:
     for path in sorted(output_dir.glob("*.review.json")):
         review = load_json(path)
         status = (
-            "已审核" if review.get("review_status") == "approved"
+            "需重新提交" if review.get("submission_status") == "resubmission_required"
+            else "已重新提交" if review.get("submission_status") == "resubmitted"
+            else "已审核" if review.get("review_status") == "approved"
             else "待裁决" if review.get("adjudication_status") == "required"
             else "待审核"
         )
@@ -315,18 +319,19 @@ def write_index(output_dir: Path, out_path: Path | None = None) -> Path:
         total = review.get("total_score")
         adjusted = review.get("adjusted_total")
         offset = review.get("score_offset")
-        if isinstance(total, (int, float)):
+        paused_for_resubmission = review.get("submission_status") in {"resubmission_required", "resubmitted"}
+        if isinstance(total, (int, float)) and not paused_for_resubmission:
             graded_totals.append(float(total))
-        if isinstance(adjusted, (int, float)):
+        if isinstance(adjusted, (int, float)) and not paused_for_resubmission:
             adjusted_totals.append(float(adjusted))
-        if isinstance(offset, (int, float)) and offset > 0:
+        if isinstance(offset, (int, float)) and offset > 0 and not paused_for_resubmission:
             offsets.add(float(offset))
         rows.append([
             Path(str(review.get("source_file", ""))).name,
             str(review.get("student_name", "")),
             str(review.get("student_id", "")),
-            str(tidy_number(total) if isinstance(total, (int, float)) else ""),
-            str(tidy_number(adjusted) if isinstance(adjusted, (int, float)) else ""),
+            str(tidy_number(total) if isinstance(total, (int, float)) and not paused_for_resubmission else ""),
+            str(tidy_number(adjusted) if isinstance(adjusted, (int, float)) and not paused_for_resubmission else ""),
             status,
             warnings,
         ])
@@ -626,6 +631,12 @@ def main() -> None:
             existing = load_json(output)
             if existing.get("review_status") == "approved":
                 raise ValueError(f"Refusing to replace approved review: {output.name}")
+            if existing.get("submission_status"):
+                history_dir = output_dir / "退回记录"
+                history_dir.mkdir(parents=True, exist_ok=True)
+                stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                archived = history_dir / f"{output.stem}_{stamp}.json"
+                shutil.copy2(output, archived)
         pending_writes.append((output, review))
 
     written = []

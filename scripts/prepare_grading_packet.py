@@ -98,28 +98,34 @@ def canonical_line(value: str) -> str:
     return re.sub(r"\s+", "", value).lower()
 
 
-EXPERIMENT_TAG = re.compile(r"^(?:实验|第)?\s*\d{1,3}$|^实验", re.IGNORECASE)
+EXPERIMENT_TAG = re.compile(r"^(?:实验|第)", re.IGNORECASE)
 
 
 def parse_identity(path: Path) -> tuple[str, str, str]:
     """Pull student id, name and experiment label out of a filename.
 
-    Accepts the documented `01_实验1_学号_姓名.pdf` shape and the equally common
-    `学号-姓名-实验04.pdf` shape: fields may be separated by underscore, hyphen or
-    whitespace. The identifier is the first 8-20 digit field, the name is what follows
-    it, and a trailing experiment tag belongs to the experiment rather than the name.
+    Accepts `01_实验1_学号_姓名.pdf`, `学号-姓名-实验04.pdf`, and
+    `06_实验1_姓名_学号(1).pdf`: fields may be separated by underscore, hyphen or
+    whitespace, and a trailing Windows duplicate marker such as `(1)` is ignored.
+    The identifier is an 8-20 digit field; the name is collected from the other
+    nonnumeric, non-topic fields, whether it appears before or after the identifier.
     """
-    parts = [part.strip() for part in re.split(r"[_\-\s]+", path.stem) if part.strip()]
-    index = next((i for i, part in enumerate(parts) if re.fullmatch(r"\d{8,20}", part)), -1)
-    if index < 0:
-        return "", "", parts[1] if len(parts) > 1 else ""
-    student_id = parts[index]
-    experiment = parts[index - 1] if index > 0 else ""
-    tail = parts[index + 1:]
-    while tail and EXPERIMENT_TAG.match(tail[-1]):
-        experiment = experiment or tail[-1]
-        tail = tail[:-1]
-    return student_id, "_".join(tail), experiment
+    # Windows Explorer appends a duplicate marker before the extension, e.g. `(1)`.
+    # Remove that marker first so `2024141460545(1)` is recognized as the same student ID.
+    stem = re.sub(r"\s*\(\d+\)$", "", path.stem)
+    parts = [part.strip() for part in re.split(r"[_\-\s]+", stem) if part.strip()]
+    id_pattern = re.compile(r"\d{8,20}")
+    index = next((i for i, part in enumerate(parts) if id_pattern.fullmatch(part)), -1)
+    student_id = parts[index] if index >= 0 else ""
+    experiments = [part for part in parts if EXPERIMENT_TAG.match(part)]
+    experiment = experiments[-1] if experiments else ""
+    name_parts = [
+        part for part in parts
+        if not id_pattern.fullmatch(part)
+        and not part.isdecimal()
+        and not EXPERIMENT_TAG.match(part)
+    ]
+    return student_id, "_".join(name_parts), experiment
 
 
 def extract_pages(path: Path) -> list[dict]:

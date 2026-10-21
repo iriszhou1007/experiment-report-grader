@@ -181,13 +181,16 @@ def build(review_dir: Path, output_path: Path) -> dict:
 
     for offset, review in enumerate(reviews):
         row = start_row + offset
+        paused_for_resubmission = review.get("submission_status") in {"resubmission_required", "resubmitted"}
         summary.cell(row=row, column=1, value=str(review["student_name"]))
         summary.cell(row=row, column=2, value=f"\u2060{review['student_id']}")
         for index, item in enumerate(review["items"]):
-            summary.cell(row=row, column=CRITERION_START_COL + index, value=float(item["score"]))
-        summary.cell(row=row, column=max_col, value=float(review["max_score"]))
+            summary.cell(row=row, column=CRITERION_START_COL + index, value=None if paused_for_resubmission else float(item["score"]))
+        summary.cell(row=row, column=max_col, value=None if paused_for_resubmission else float(review["max_score"]))
         status = (
-            "已审核" if review.get("review_status") == "approved"
+            "需重新提交" if review.get("submission_status") == "resubmission_required"
+            else "已重新提交" if review.get("submission_status") == "resubmitted"
+            else "已审核" if review.get("review_status") == "approved"
             else "待裁决" if review.get("adjudication_status") == "required"
             else "待审核"
         )
@@ -196,14 +199,14 @@ def build(review_dir: Path, output_path: Path) -> dict:
         summary.cell(
             row=row,
             column=total_col,
-            value=f"=SUM({first_criterion_letter}{row}:{last_criterion_letter}{row})",
+            value=None if paused_for_resubmission else f"=SUM({first_criterion_letter}{row}:{last_criterion_letter}{row})",
         )
         if uses_offset:
             review_offset = float(review.get("score_offset") or 0)
             summary.cell(
                 row=row,
                 column=adjusted_col,
-                value=f"=MIN({max_letter}{row},{total_letter}{row}+{review_offset:g})",
+                value=None if paused_for_resubmission else f"=MIN({max_letter}{row},{total_letter}{row}+{review_offset:g})",
             )
 
     data_ref = f"A6:{last_col}{end_row}"

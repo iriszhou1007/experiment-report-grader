@@ -3,8 +3,8 @@
 
 The review marks (a red checkmark on every page of student work before the 指导老师评议 page, the
 teacher's signature ink on that page, and the graded score in its 成绩评定 field) are drawn first,
-then the feedback sheet is prepended as page 1. Both steps read the immutable original backup and
-write elsewhere, so the source is only ever replaced atomically by the caller.
+then the feedback sheet is inserted at the selected end of the PDF. Both steps read the immutable
+original backup and write elsewhere, so the source is only ever replaced atomically by the caller.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import random
+import re
 import sys
 from html import escape
 from pathlib import Path
@@ -35,8 +36,10 @@ import fitz  # noqa: E402
 from review_marking import (  # noqa: E402
     DEFAULT_SCORE_FONT,
     copy_signature_ink,
+    copy_signature_image,
     draw_review_checkmark,
     find_review_page,
+    is_signature_image,
     make_page_rng,
     review_label_rects,
     signature_ink_color,
@@ -176,25 +179,102 @@ def build_feedback_pdf(path: Path, data: dict, page_size: tuple[float, float]) -
     doc.build(story)
 
 
-def prepend_feedback(source: Path, feedback: Path, output: Path) -> tuple[int, int]:
-    """Put the feedback sheet in front of the report so it is seen first.
+def prepend_feedback(source: Path, feedback: Path, output: Path, position: str = "first") -> tuple[int, int]:
+    """Place the feedback sheet at the requested end of the report.
 
-    Original pages keep their own order and content, but every one of them shifts by
-    one position: a page the grading packet called p.7 is page 8 of the written-back
-    file. Evidence page numbers in the review JSON keep referring to the original
-    report, which is why the source backup stays the reference copy.
+    Original pages keep their own order and content. Their final page numbers shift only
+    when the feedback sheet is placed first. Evidence page numbers in the review JSON
+    keep referring to the original report, which is why the source backup stays the reference copy.
     """
     source_reader = PdfReader(str(source))
     feedback_reader = PdfReader(str(feedback))
     writer = PdfWriter()
-    for page in feedback_reader.pages:
-        writer.add_page(page)
-    for page in source_reader.pages:
+    if position == "first":
+        ordered = [*feedback_reader.pages, *source_reader.pages]
+    elif position == "last":
+        ordered = [*source_reader.pages, *feedback_reader.pages]
+    else:
+        raise ValueError(f"unsupported feedback position: {position}")
+    for page in ordered:
         writer.add_page(page)
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as stream:
         writer.write(stream)
     return len(source_reader.pages), len(feedback_reader.pages)
+
+
+def add_handwritten_comments(
+    document: fitz.Document,
+    data: dict,
+    review_page_index: int,
+    font_path: Path,
+) -> list[dict]:
+    """Place item comments in verified blank margins on the cited original pages."""
+    comments_by_page: dict[int, list[str]] = {}
+    for item in data.get("items", []):
+        comment = str(item.get("comment") or "").strip()
+        if not comment:
+            continue
+        cited_pages = set()
+        for evidence in item.get("evidence", []):
+            match = re.search(
+                r"第\s*(\d+)\s*页|\b(?:p|page)\.?\s*(\d+)\b",
+                str(evidence),
+                re.IGNORECASE,
+            )
+            if match:
+                cited_pages.add(int(match.group(1) or match.group(2)))
+        for page_number in cited_pages:
+            if 1 <= page_number <= review_page_index:
+                text = f"{item.get('criterion', '评语')}：{comment}"[:120]
+                comments_by_page.setdefault(page_number, []).append(text)
+
+    if any(str(item.get("comment") or "").strip() for item in data.get("items", [])) and not comments_by_page:
+        raise ValueError(
+            "handwritten comments were selected, but the scoring evidence has no readable page numbers; "
+            "turn off handwritten comments or add page references before write-back"
+        )
+
+    placed: list[dict] = []
+    for page_number, comments in sorted(comments_by_page.items()):
+        page = document[page_number - 1]
+        page_rect = page.rect
+        width = min(210.0, page_rect.width * 0.38)
+        height = min(68.0, page_rect.height * 0.13)
+        inset = 8.0
+        candidates = [
+            fitz.Rect(page_rect.x0 + inset, page_rect.y0 + inset, page_rect.x0 + inset + width, page_rect.y0 + inset + height),
+            fitz.Rect(page_rect.x1 - inset - width, page_rect.y0 + inset, page_rect.x1 - inset, page_rect.y0 + inset + height),
+            fitz.Rect(page_rect.x0 + inset, page_rect.y1 - inset - height, page_rect.x0 + inset + width, page_rect.y1 - inset),
+            fitz.Rect(page_rect.x1 - inset - width, page_rect.y1 - inset - height, page_rect.x1 - inset, page_rect.y1 - inset),
+        ]
+        for text in comments:
+            blocks = page.get_text("blocks")
+            obstacles = [fitz.Rect(block[:4]) for block in blocks if len(block) >= 4]
+            obstacles.extend(
+                rect for image in page.get_images(full=True) for rect in page.get_image_rects(image[0])
+            )
+            target = next(
+                (candidate for candidate in candidates if not any(candidate.intersects(box) for box in obstacles)),
+                None,
+            )
+            if target is None:
+                raise ValueError(
+                    f"cannot place handwritten comment safely on source page {page_number}; "
+                    "turn off handwritten comments or review the source page manually"
+                )
+            spare = page.insert_textbox(
+                target,
+                text,
+                fontfile=str(font_path),
+                fontsize=8,
+                color=(0.82, 0.12, 0.12),
+                overlay=True,
+            )
+            if spare < 0:
+                raise ValueError(f"handwritten comment does not fit on source page {page_number}")
+            placed.append({"page": page_number, "rect": [round(v, 2) for v in target], "text": text})
+    return placed
 
 
 def score_for_report(data: dict) -> str:
@@ -212,10 +292,16 @@ def score_for_report(data: dict) -> str:
 def annotate_report(
     source: Path,
     output: Path,
+    data: dict,
     score_text: str,
     signature_pdf: Path | None,
     font_path: Path,
     seed: int | None,
+    *,
+    checkmarks: bool = True,
+    include_signature: bool = True,
+    include_score: bool = True,
+    handwritten_comments: bool = False,
 ) -> dict:
     """Checkmarks, signature ink and score on the original pages, saved to ``output``."""
     seed = seed if seed is not None else random.SystemRandom().randrange(1 << 30)
@@ -228,7 +314,7 @@ def annotate_report(
         file_rng = random.Random(random.Random(seed).randrange(1 << 30))
         marked = []
         for page in document:
-            if page.number < review_page_index:
+            if checkmarks and page.number < review_page_index:
                 draw_review_checkmark(page, make_page_rng(file_rng, page.number))
                 marked.append(page.number + 1)
         summary["checkmarked_pages"] = marked
@@ -236,22 +322,37 @@ def annotate_report(
             number for number in range(1, document.page_count + 1) if number not in marked
         ]
 
-        copied = 0
-        color = (0.96, 0.26, 0.22)
-        if signature_pdf is not None:
-            copied = copy_signature_ink(
-                signature_pdf, document, target_page_index=review_page_index
+        if handwritten_comments:
+            summary["handwritten_comments"] = add_handwritten_comments(
+                document, data, review_page_index, font_path
             )
-            if copied == 0:
-                raise ValueError(
-                    f"no teacher-signature ink found in {signature_pdf} near 指导教师签名"
+
+        copied = 0
+        signature_image_rect = None
+        color = (0.96, 0.26, 0.22)
+        if include_signature and signature_pdf is not None:
+            if is_signature_image(signature_pdf):
+                _score_rect, signature_label_rect = review_label_rects(document, review_page_index)
+                signature_image_rect = copy_signature_image(
+                    signature_pdf, document[review_page_index], signature_label_rect
                 )
+            else:
+                copied = copy_signature_ink(
+                    signature_pdf, document, target_page_index=review_page_index
+                )
+                if copied == 0:
+                    raise ValueError(
+                        f"no teacher-signature ink found in {signature_pdf} near 指导教师签名"
+                    )
             color = signature_ink_color(signature_pdf)
         summary["signature_ink_annotations"] = copied
-        summary["signature_pdf"] = str(signature_pdf) if signature_pdf else None
+        if signature_image_rect is not None:
+            summary["signature_image_rect"] = [round(value, 2) for value in signature_image_rect]
+            summary["signature_image_count"] = 1
+        summary["signature_file"] = str(signature_pdf) if signature_pdf else None
         summary["score_included"] = bool(score_text)
 
-        if score_text:
+        if include_score and score_text:
             label_rect, signature_rect = review_label_rects(document, review_page_index)
             placement = write_score(
                 document[review_page_index], label_rect, signature_rect, score_text, font_path, color
@@ -280,15 +381,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--approved", action="store_true")
     parser.add_argument(
-        "--signature-pdf",
+        "--signature-pdf", "--signature-file", dest="signature_pdf",
         type=Path,
-        help=f"teacher signature template (default: {DEFAULT_SIGNATURE_PDF})",
+        help=f"teacher signature PDF or transparent PNG (default: {DEFAULT_SIGNATURE_PDF})",
     )
     parser.add_argument(
         "--no-review-marks",
         action="store_true",
         help="prepend the feedback sheet only, without checkmarks, signature or score",
     )
+    parser.add_argument("--no-checkmarks", action="store_true")
+    parser.add_argument("--no-signature", action="store_true")
+    parser.add_argument("--no-score", action="store_true")
+    parser.add_argument("--handwritten-comments", action="store_true")
+    parser.add_argument("--feedback-position", choices=("first", "last"), default="first")
     parser.add_argument("--score-font", type=Path, default=Path(DEFAULT_SCORE_FONT))
     parser.add_argument("--seed", type=int)
     return parser.parse_args()
@@ -319,12 +425,24 @@ def main() -> None:
         if args.no_review_marks:
             body = source
         else:
-            score_text = score_for_report(data)
-            signature_pdf = (args.signature_pdf or Path(DEFAULT_SIGNATURE_PDF)).resolve()
-            if not signature_pdf.is_file():
+            score_text = "" if args.no_score else score_for_report(data)
+            signature_pdf = None
+            if not args.no_signature:
+                signature_pdf = (args.signature_pdf or Path(DEFAULT_SIGNATURE_PDF)).resolve()
+            if signature_pdf is not None and not signature_pdf.is_file():
                 raise SystemExit(f"signature template not found: {signature_pdf}")
             annotation = annotate_report(
-                source, marked_pdf, score_text, signature_pdf, args.score_font, args.seed
+                source,
+                marked_pdf,
+                data,
+                score_text,
+                signature_pdf,
+                args.score_font,
+                args.seed,
+                checkmarks=not args.no_checkmarks,
+                include_signature=not args.no_signature,
+                include_score=not args.no_score,
+                handwritten_comments=args.handwritten_comments,
             )
             verification = verify_pair(source, marked_pdf, annotation)
             if not verification["ok"]:
@@ -347,7 +465,7 @@ def main() -> None:
             }
             body = marked_pdf
         build_feedback_pdf(feedback, data, page_size)
-        source_pages, feedback_pages = prepend_feedback(body, feedback, output)
+        source_pages, feedback_pages = prepend_feedback(body, feedback, output, args.feedback_position)
     finally:
         feedback.unlink(missing_ok=True)
         marked_pdf.unlink(missing_ok=True)
@@ -360,13 +478,16 @@ def main() -> None:
         "output": str(output),
         "source_pages": source_pages,
         "feedback_pages": feedback_pages,
-        "feedback_page": 1,
+        "feedback_page": 1 if args.feedback_position == "first" else expected_pages,
+        "feedback_position": args.feedback_position,
         "total_pages": expected_pages,
         "annotation": annotation,
     }
     if annotation:
-        # The review page moved down by the prepended sheet; report where it landed.
-        summary["review_page_in_output"] = int(annotation["review_page"]) + feedback_pages
+        # The review page moves only when the feedback sheet is inserted first.
+        summary["review_page_in_output"] = int(annotation["review_page"]) + (
+            feedback_pages if args.feedback_position == "first" else 0
+        )
     print(json.dumps(summary, ensure_ascii=False))
 
 

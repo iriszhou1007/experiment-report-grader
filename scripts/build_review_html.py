@@ -12,7 +12,7 @@ details are load-bearing rather than stylistic:
   * every "<" becomes the literal escape \\u003c, like replaceAll("<", "\\\\u003c")
   * reviews are read from a name-sorted listing and carry __review_file last
 
-Usage: build_review_html.py <review-dir> <output.html> [batch-notices.json]
+Usage: build_review_html.py <review-dir> <output.html> [batch-notices.json] [preflight.json]
 
 The optional third argument is a JSON file holding ``{"batch_notices": [...]}``. Those are the
 batch's settings-level notes (see ``BATCH_LEVEL_WARNINGS`` in materialize_reviews.py), which the
@@ -27,6 +27,7 @@ from pathlib import Path
 
 PLACEHOLDER = "__REVIEWS_JSON__"
 NOTICES_PLACEHOLDER = "__BATCH_NOTICES_JSON__"
+PREFLIGHT_PLACEHOLDER = "__PREFLIGHT_JSON__"
 
 
 def build(
@@ -34,6 +35,7 @@ def build(
     output_path: Path,
     template_path: Path,
     notices_path: Path | None = None,
+    preflight_path: Path | None = None,
 ) -> dict:
     names = sorted(
         name for name in (entry.name for entry in review_dir.iterdir())
@@ -56,6 +58,17 @@ def build(
         if not isinstance(loaded, list):
             raise ValueError("batch notices must be a JSON list")
         notices = [str(item) for item in loaded if str(item).strip()]
+    preflight: list[dict] = []
+    if preflight_path is not None and preflight_path.is_file():
+        loaded = json.loads(preflight_path.read_text(encoding="utf-8"))
+        preflight = loaded.get("entries", []) if isinstance(loaded, dict) else loaded
+        if not isinstance(preflight, list):
+            raise ValueError("preflight inventory must be a JSON list")
+    else:
+        batch_info_path = review_dir.parent / "批次信息.json"
+        if batch_info_path.is_file():
+            batch_info = json.loads(batch_info_path.read_text(encoding="utf-8"))
+            preflight = batch_info.get("submission_preflight", [])
 
     # Same escaping contract as the reviews payload: raw non-ASCII, "<" as \u003c so a notice
     # that quotes the template cannot terminate the surrounding <script> element.
@@ -63,13 +76,13 @@ def build(
         return json.dumps(value, ensure_ascii=False, separators=(",", ":")).replace("<", "\\u003c")
 
     template = template_path.read_text(encoding="utf-8")
-    for placeholder in (PLACEHOLDER, NOTICES_PLACEHOLDER):
+    for placeholder in (PLACEHOLDER, NOTICES_PLACEHOLDER, PREFLIGHT_PLACEHOLDER):
         if template.count(placeholder) != 1:
             raise ValueError(f"Review template must contain exactly one {placeholder} placeholder")
     # str.replace takes the plain string path, so a "$&" inside a student's comment is literal.
     html = template.replace(PLACEHOLDER, encode(reviews)).replace(
         NOTICES_PLACEHOLDER, encode(notices)
-    )
+    ).replace(PREFLIGHT_PLACEHOLDER, encode(preflight))
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     # newline="" disables newline translation. Without it, Windows turns every LF in the template
@@ -86,9 +99,9 @@ def build(
 
 
 def main() -> int:
-    if len(sys.argv) not in {3, 4}:
+    if len(sys.argv) not in {3, 4, 5}:
         print(
-            "Usage: build_review_html.py <review-dir> <output.html> [batch-notices.json]",
+            "Usage: build_review_html.py <review-dir> <output.html> [batch-notices.json] [preflight.json]",
             file=sys.stderr,
         )
         return 2
@@ -99,6 +112,7 @@ def main() -> int:
             Path(sys.argv[2]).resolve(),
             skill_dir / "assets" / "review-panel-template.html",
             Path(sys.argv[3]).resolve() if len(sys.argv) == 4 else None,
+            Path(sys.argv[4]).resolve() if len(sys.argv) == 5 else None,
         )
     except (ValueError, OSError) as error:
         print(json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False), file=sys.stderr)
