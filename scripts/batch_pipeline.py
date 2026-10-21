@@ -25,14 +25,12 @@ from materialize_reviews import BATCH_LEVEL_WARNINGS, WARNING_LABELS as BATCH_LE
 from scoring_policy import calculate_deduction_scores, minimum_offset_for_average, score_distribution, uses_deduction_policy
 
 
-PIPELINE_VERSION = "2.0.0"
+PIPELINE_VERSION = "2.1.0"
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
-# Scratch space and the batch work directories live under the workspace, which defaults to the
-# directory holding the skill. That default stops making sense when the skill is kept in a git
-# checkout elsewhere — scratch would land in the checkout's parent — so point it at the folder
-# the batch data lives in instead:
-#   export EXPERIMENT_REPORT_GRADER_WORKSPACE=~/Downloads
+# The workspace is used only for service/runtime files. Grading intermediates are always placed
+# beside the submitted reports, so they are easy to find and clean without filling the skill
+# checkout or a shared workspace.
 WORKSPACE_DIR = Path(
     os.environ.get("EXPERIMENT_REPORT_GRADER_WORKSPACE") or SKILL_DIR.parent
 ).expanduser().resolve()
@@ -631,9 +629,25 @@ def prepare_batch(args: argparse.Namespace) -> dict:
         str(stable_version_check["stable_commit"]),
     )
 
-    work_dir = Path(args.work_dir).resolve() if args.work_dir else (
-        WORKSPACE_DIR / "tmp" / "experiment-report-grader" / batch_id
-    )
+    expected_work_dir = (report_dir / f"{batch_id}_评分暂存").resolve()
+    work_dir = Path(args.work_dir).resolve() if args.work_dir else expected_work_dir
+    if work_dir != expected_work_dir:
+        legacy_work_dir = (report_dir / "tmp" / "experiment-report-grader" / batch_id).resolve()
+        legacy_manifest = legacy_work_dir / "grading-manifest.json"
+        legacy_is_this_batch = False
+        if work_dir == legacy_work_dir and legacy_manifest.is_file():
+            try:
+                old_manifest = read_json(legacy_manifest)
+                legacy_is_this_batch = (
+                    str(Path(old_manifest.get("report_dir", "")).resolve()) == str(report_dir)
+                    and str(old_manifest.get("batch_id", "")) == batch_id
+                )
+            except (OSError, json.JSONDecodeError, TypeError):
+                legacy_is_this_batch = False
+        if not legacy_is_this_batch:
+            raise ValueError(
+                f"评分暂存目录必须位于实验报告目录下：{expected_work_dir}；拒绝使用工作区或其他位置。"
+            )
     work_dir.mkdir(parents=True, exist_ok=True)
     saved_decisions = previous_decisions(work_dir)
     existing_reviews = load_reviews(review_dir)
@@ -1567,9 +1581,20 @@ def batch_status(args: argparse.Namespace) -> dict:
 
 def clean_work(args: argparse.Namespace) -> dict:
     work_dir = Path(args.work_dir).resolve()
-    allowed_root = (WORKSPACE_DIR / "tmp" / "experiment-report-grader").resolve()
-    if work_dir == allowed_root or allowed_root not in work_dir.parents:
-        raise ValueError(f"Refusing to clean outside the workspace temp directory: {work_dir}")
+    manifest_path = work_dir / "grading-manifest.json"
+    if not manifest_path.is_file():
+        raise ValueError(f"Refusing to clean a directory without a grading manifest: {work_dir}")
+    manifest = read_json(manifest_path)
+    report_dir = Path(str(manifest.get("report_dir", ""))).resolve()
+    batch_id = safe_batch_id(str(manifest.get("batch_id", "")))
+    allowed = {
+        (report_dir / f"{batch_id}_评分暂存").resolve(),
+        (report_dir / "tmp" / "experiment-report-grader" / batch_id).resolve(),
+    }
+    if work_dir not in allowed:
+        raise ValueError(f"Refusing to clean a directory outside the recorded report batch: {work_dir}")
+    if Path(str(manifest.get("result_dir", ""))).resolve() == work_dir:
+        raise ValueError("Refusing to clean the result directory")
     if work_dir.exists():
         shutil.rmtree(work_dir)
     summary = {"ok": True, "phase": "clean", "removed": str(work_dir)}

@@ -416,7 +416,10 @@ def main() -> None:
         raise ValueError("source PDF has no pages")
     box = source_reader.pages[-1].mediabox
     page_size = (float(box.width), float(box.height))
-    temp_root = Path.cwd() / "tmp" / "pdfs"
+    # Keep write-back intermediates beside the requested output PDF. The review server places
+    # that output inside this report batch's managed scoring-staging directory, so no PDF scratch
+    # files accumulate under the skill checkout or a shared workspace.
+    temp_root = output.parent / "pdfs"
     temp_root.mkdir(parents=True, exist_ok=True)
     feedback = temp_root / f"feedback-{uuid4().hex}.pdf"
     marked_pdf = temp_root / f"marked-{uuid4().hex}.pdf"

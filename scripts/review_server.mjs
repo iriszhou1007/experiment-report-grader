@@ -56,7 +56,6 @@ let outputDir = null;
 let workbookPath = null;
 let originalBackupDir = null;
 let batchHtmlPath = null;
-const tempRoot = path.join(workspace, "tmp", "review-server");
 const htmlBuilder = path.join(skillDir, "scripts", "build_review_html.py");
 const submissionPreflight = path.join(skillDir, "scripts", "submission_preflight.py");
 const spreadsheetExporter = path.join(skillDir, "scripts", "export_scores.py");
@@ -115,6 +114,7 @@ async function createWritebackPreview(reviewFile, incoming, options = {}) {
   if (Number.isFinite(offset) && offset > 0) previewReview.adjusted_total = Math.min(Number(previewReview.max_score), previewReview.total_score + offset);
   const id = crypto.randomUUID();
   const seed = crypto.randomInt(1, 1 << 30);
+  const tempRoot = batchTempRoot();
   const reviewTemp = path.join(tempRoot, `${id}.review.json`);
   const pdfTemp = path.join(tempRoot, `${id}.preview.pdf`);
   await fs.mkdir(tempRoot, { recursive: true });
@@ -211,6 +211,7 @@ async function selectBatch(reportDirInput, batchName, inspectionModeInput = "tex
     batch_id: batchId,
     batch_name: String(batchName || path.basename(reportDir)),
     report_dir: reportDir,
+    work_dir: savedBatchInfo.work_dir ? path.resolve(savedBatchInfo.work_dir) : null,
     pdf_count: pdfFiles.length,
     eligible_pdf_count: submissionPreflight.filter((entry) => entry.file_type === "PDF" && entry.included_in_grading).length,
     pdf_files: pdfFiles,
@@ -265,6 +266,7 @@ async function openExistingBatch(batchDirInput) {
     batch_id: batchId,
     batch_name: String(info.batch_name || batchId),
     report_dir: reportDir,
+    work_dir: info.work_dir ? path.resolve(info.work_dir) : null,
     pdf_count: Number(info.submitted_pdf_count ?? info.pdf_count ?? pdfFiles.length),
     eligible_pdf_count: Number(info.eligible_pdf_count ?? info.pdf_count ?? pdfFiles.length),
     pdf_files: pdfFiles,
@@ -307,13 +309,22 @@ async function reportFolders() {
 }
 
 function managedWorkDir() {
-  const root = path.resolve(workspace, "tmp", "experiment-report-grader");
-  const candidate = path.resolve(root, safeBatchId(batch.batch_id));
-  if (path.dirname(candidate) !== root) throw new Error("拒绝访问批次临时目录之外的路径");
-  if (batch.work_dir && path.resolve(batch.work_dir) !== candidate) {
-    throw new Error("批次记录的暂存路径与 skill 管理的批次路径不一致，拒绝清理");
+  const reportRoot = path.resolve(batch.report_dir);
+  const batchId = safeBatchId(batch.batch_id);
+  const candidate = path.resolve(reportRoot, `${batchId}_评分暂存`);
+  const legacyCandidate = path.resolve(reportRoot, "tmp", "experiment-report-grader", batchId);
+  const recorded = batch.work_dir ? path.resolve(batch.work_dir) : null;
+  if (recorded && recorded !== candidate && recorded !== legacyCandidate) {
+    throw new Error("批次记录的暂存路径不在该实验报告目录的受管位置，拒绝清理");
   }
-  return { root, candidate };
+  const selected = recorded || candidate;
+  const root = selected === candidate ? reportRoot : path.dirname(selected);
+  if (path.dirname(selected) !== root) throw new Error("拒绝访问报告目录之外的评分暂存路径");
+  return { root, candidate: selected };
+}
+
+function batchTempRoot() {
+  return path.join(managedWorkDir().candidate, "review-server-tmp");
 }
 
 async function cleanupSummary() {
@@ -388,6 +399,12 @@ async function cleanBatchWork() {
     maxBuffer: 1024 * 1024,
   });
   batch.work_dir = null;
+  try {
+    const info = JSON.parse(await fs.readFile(path.join(outputDir, "批次信息.json"), "utf8"));
+    info.work_dir = null;
+    await fs.writeFile(path.join(outputDir, "批次信息.json"), JSON.stringify(info, null, 2) + "\n", "utf8");
+  } catch {}
+  await fs.writeFile(registryPath, JSON.stringify(batch, null, 2), "utf8");
   return { ok: true, removed: candidate, preserved: summary.preserved };
 }
 
@@ -486,6 +503,8 @@ async function runArtifacts(tempHtml, tempWorkbook) {
 // keep reporting 待审核 while the workbook already says 已审核.
 async function refreshIndex() {
   if (!outputDir) return;
+  const tempRoot = batchTempRoot();
+  await fs.mkdir(tempRoot, { recursive: true });
   const tempIndex = path.join(tempRoot, `index-${crypto.randomUUID()}.md`);
   await runFile(
     python,
@@ -591,6 +610,7 @@ async function saveReview(reviewFile, incoming, approve, writebackOptions = {}, 
     review.adjudication_acknowledged = true;
   }
   const source = validateReview(review);
+  const tempRoot = batchTempRoot();
   await fs.mkdir(tempRoot, { recursive: true });
   const id = crypto.randomUUID();
   const tempHtml = path.join(tempRoot, `${id}.html`);
@@ -782,6 +802,8 @@ async function setResubmissionStatus(reviewFile, action) {
   const temp = `${reviewPath}.${crypto.randomUUID()}.tmp`;
   await fs.writeFile(temp, JSON.stringify(review, null, 2) + "\n", "utf8");
   await replaceFile(temp, reviewPath);
+  const tempRoot = batchTempRoot();
+  await fs.mkdir(tempRoot, { recursive: true });
   const tempHtml = path.join(tempRoot, `${crypto.randomUUID()}.html`);
   const tempWorkbook = path.join(tempRoot, `${crypto.randomUUID()}.xlsx`);
   try {

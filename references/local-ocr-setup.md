@@ -79,9 +79,7 @@ screenshot-heavy reports has on the order of 400–650 candidate pages, so a fir
 The recognition cache lives in `<work-dir>/ocr-cache` and is keyed by page hash,
 candidate page set and engine, so re-running `prepare` is fast. Note that `clean`
 deletes the work directory — and therefore that cache — so a cleaned batch re-runs OCR
-from scratch. `clean` also refuses to delete a work directory outside the workspace
-temp directory, so a batch run with `--work-dir /tmp/...` keeps its cache and cannot
-reclaim it through `clean`.
+from scratch. New batches keep the work directory at `<report-dir>/<batch-id>_评分暂存`, beside the submitted reports. Arbitrary `--work-dir` paths are rejected; a matching legacy batch under the same report directory can still be resumed and cleaned.
 
 Evidence grows as well: with `--inspection-mode smart`, the same 4 reports go from
 12,987 to 18,640 characters of packet (~+44%), because 27 pages that previously stayed

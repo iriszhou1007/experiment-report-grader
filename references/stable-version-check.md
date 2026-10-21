@@ -19,4 +19,4 @@ python scripts/check_stable_version.py --rubric assets/rubrics/experiment-1-web-
 
 `batch_pipeline.py prepare` 会再次执行同一检查，因此不能通过跳过手动命令绕过门槛。成功结果写入 `grading-manifest.json` 和输出目录的 `批次信息.json`；重新准备时，稳定 Release 或 commit 变化会使旧评分决策失去可复用资格。
 
-稳定 Release 的发布是版本批准边界。发布前先更新 `skill_version`、`pipeline_version` 和需要发布的评分标准，审阅完整变更后创建对应的稳定 Release/Release。不得用移动的分支名充当发布记录。
+稳定 Release 的发布是版本批准边界。发布前先更新 `skill_version`、`pipeline_version` 和需要发布的评分标准，审阅完整变更后创建对应的稳定 Release。不得用移动的分支名充当发布记录。
