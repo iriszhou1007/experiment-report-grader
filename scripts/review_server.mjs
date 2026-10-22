@@ -502,6 +502,24 @@ async function runArtifacts(tempHtml, tempWorkbook) {
   await refreshIndex();
 }
 
+async function refreshPanelHtml() {
+  if (!batchHtmlPath || !(await readReviews()).length) return;
+  const tempHtml = path.join(path.dirname(batchHtmlPath), `.panel-${crypto.randomUUID()}.html`);
+  try {
+    await runFile(python, [htmlBuilder, reviewDir, tempHtml], {
+      cwd: workspace,
+      windowsHide: true,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    await fs.mkdir(serviceRoot, { recursive: true });
+    await fs.mkdir(path.dirname(batchHtmlPath), { recursive: true });
+    await fs.copyFile(tempHtml, htmlPath);
+    await fs.copyFile(tempHtml, batchHtmlPath);
+  } finally {
+    await fs.rm(tempHtml, { force: true });
+  }
+}
+
 // index.md is otherwise only rewritten by `finalize`, so after an in-panel approval it would
 // keep reporting 待审核 while the workbook already says 已审核.
 async function refreshIndex() {
@@ -955,6 +973,11 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(port, host, async () => {
+  try {
+    await refreshPanelHtml();
+  } catch (error) {
+    console.error(`Could not refresh review panel from the current template: ${error.message}`);
+  }
   await fs.mkdir(path.dirname(readyFile), { recursive: true });
   await fs.writeFile(readyFile, JSON.stringify({ pid: process.pid, url: `http://${host}:${port}/`, workspace, batch_id: batch.batch_id }, null, 2), "utf8");
   console.log(`Review server ready at http://${host}:${port}/`);
