@@ -180,15 +180,22 @@ async function selectBatch(reportDirInput, batchName, inspectionModeInput = "tex
   const reportDir = path.resolve(String(reportDirInput ?? ""));
   const stat = await fs.stat(reportDir);
   if (!stat.isDirectory()) throw new Error("报告地址不是文件夹");
+  const batchId = safeBatchId(batchName || path.basename(reportDir));
+  const resultDir = path.join(reportDir, `${batchId}_批改结果`);
+  let savedBatchInfo = {};
+  try { savedBatchInfo = JSON.parse(await fs.readFile(path.join(resultDir, "批次信息.json"), "utf8")); }
+  catch {}
   const pdfFiles = (await fs.readdir(reportDir, { withFileTypes: true }))
     .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pdf"))
     .map((entry) => entry.name)
     .sort();
   const submissionPreflight = await scanSubmissions(reportDir);
-  const batchId = safeBatchId(batchName || path.basename(reportDir));
+  // A browser reload can restart the server and clear its in-memory batch. Use the
+  // persisted preflight as the return baseline so a matching PDF added after a
+  // DOC-only submission remains visible as "已重新提交" across reloads.
   const previousPreflight = path.resolve(batch?.report_dir ?? "") === reportDir && batch?.batch_id === batchId
-    ? (batch?.submission_preflight ?? [])
-    : [];
+    ? (batch?.submission_preflight ?? savedBatchInfo.submission_preflight ?? [])
+    : (savedBatchInfo.submission_preflight ?? []);
   const priorReturns = previousPreflight
     .filter((entry) => String(entry.status ?? "").includes("需重新提交") && entry.student_id)
     .map((entry) => `${entry.student_id}|${String(entry.experiment ?? "").toLowerCase()}`);
@@ -202,10 +209,6 @@ async function selectBatch(reportDirInput, batchName, inspectionModeInput = "tex
   }
   const inspectionMode = ["text_only", "smart", "full_visual"].includes(inspectionModeInput) ? inspectionModeInput : "text_only";
   const autoUpgradeVisual = autoUpgradeVisualInput !== false;
-  const resultDir = path.join(reportDir, `${batchId}_批改结果`);
-  let savedBatchInfo = {};
-  try { savedBatchInfo = JSON.parse(await fs.readFile(path.join(resultDir, "批次信息.json"), "utf8")); }
-  catch {}
   const next = {
     ...savedBatchInfo,
     batch_id: batchId,
