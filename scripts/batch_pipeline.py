@@ -25,7 +25,7 @@ from materialize_reviews import BATCH_LEVEL_WARNINGS, WARNING_LABELS as BATCH_LE
 from scoring_policy import calculate_deduction_scores, minimum_offset_for_average, score_distribution, uses_deduction_policy
 
 
-PIPELINE_VERSION = "2.1.2"
+PIPELINE_VERSION = "2.1.3"
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 # The workspace is used only for service/runtime files. Grading intermediates are always placed
