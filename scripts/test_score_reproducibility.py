@@ -505,6 +505,8 @@ def main() -> None:
         result_dir = temp / "result"
         review_dir = result_dir / "reviewjson"
         work.mkdir()
+        result_dir.mkdir()
+        write_json(result_dir / "批次信息.json", {"submission_preflight": []})
         report = {
             "report_id": "r0001",
             "source_name": "student.pdf",
@@ -574,6 +576,8 @@ def main() -> None:
         exp_work = temp / "experiment-work"
         exp_result = temp / "experiment-result"
         exp_work.mkdir()
+        exp_result.mkdir()
+        write_json(exp_result / "批次信息.json", {"submission_preflight": []})
         exp_manifest = {
             **manifest, "rubric": experiment_one, "result_dir": str(exp_result),
             "review_dir": str(exp_result / "reviewjson"),

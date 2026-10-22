@@ -25,7 +25,7 @@ from materialize_reviews import BATCH_LEVEL_WARNINGS, WARNING_LABELS as BATCH_LE
 from scoring_policy import calculate_deduction_scores, minimum_offset_for_average, score_distribution, uses_deduction_policy
 
 
-PIPELINE_VERSION = "2.1.1"
+PIPELINE_VERSION = "2.1.2"
 SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_DIR = SCRIPT_DIR.parent
 # The workspace is used only for service/runtime files. Grading intermediates are always placed
@@ -1674,8 +1674,8 @@ def write_self_test_reviews(review_dir: Path, score_offset: float = 5, hostile: 
 def panel_payload(html_path: Path, *, assignment: str = "reviews") -> list:
     """Read a JSON payload back out of a generated panel.
 
-    The template assigns both payloads directly on one line
-    (``let reviews=<json>; let batchNotices=<json>; let active=0;``), so a payload is everything
+    The template assigns all payloads directly on one line
+    (``let reviews=<json>; let batchNotices=<json>; let preflightItems=<json>; let active=0;``), so a payload is everything
     between its own assignment and the next marker. A comment may contain a trailing marker as
     ordinary text — the hostile self-test variant does exactly that on purpose — so each candidate
     boundary is tried until one parses as JSON rather than taking the first match.
@@ -1684,7 +1684,12 @@ def panel_payload(html_path: Path, *, assignment: str = "reviews") -> list:
     start_marker = f"let {assignment}="
     if assignment == "reviews":
         end_marker = "; let batchNotices="
+    elif assignment == "batchNotices":
+        end_marker = "; let preflightItems="
     else:
+        end_marker = "; let active=0;"
+    if assignment == "batchNotices" and end_marker not in text:
+        # Older panels did not carry a separate preflight payload.
         end_marker = "; let active=0;"
     if end_marker not in text and assignment == "reviews":
         # A panel written before batch-level notices existed still ends at the active marker.

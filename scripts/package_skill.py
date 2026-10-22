@@ -272,7 +272,7 @@ def verify_archive(archive: Path, expect_absent: list[str]) -> dict:
         # Everything doctor calls missing has to be a documented per-machine item; anything else
         # means the archive is incomplete and would fail later, in the middle of a batch.
         allowed = {
-            "signature template", "score font", "tesseract", "pdftoppm", "node", "ocr engine",
+            "teacher signature", "score font", "tesseract", "pdftoppm", "node", "ocr engine",
         }
         unexpected = sorted(set(parsed.get("missing", [])) - allowed)
         check(
