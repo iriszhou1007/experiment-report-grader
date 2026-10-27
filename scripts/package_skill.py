@@ -76,12 +76,15 @@ REQUIRED_IN_ARCHIVE = (
     "scripts/setup_local_ocr.sh",
     "assets/default-rubric.json",
     "assets/rubrics/experiment-1-web-http.json",
+    "assets/rubrics/experiment-2-dns.json",
     "assets/guides/experiment-1-web-http.pdf",
+    "assets/guides/experiment-2-dns.html",
     "assets/review-panel-template.html",
     "config/defaults.example.json",
     "references/portability.md",
     "references/stable-version-check.md",
     "references/experiment-1-web-http.md",
+    "references/experiment-2-dns.md",
     "agents/openai.yaml",
 )
 

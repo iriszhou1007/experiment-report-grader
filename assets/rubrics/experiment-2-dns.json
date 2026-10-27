@@ -1,0 +1,246 @@
+{
+  "rubric_id": "experiment-2-dns-v1.1-obvious-defects",
+  "title": "实验2：DNS服务器配置与DNS协议分析（正式发布v1.1）",
+  "source_requirements": {
+    "file": "实验2_DNS服务器配置与DNS协议分析_实验指导书.html",
+    "sha256": "f4083dca49eec767fd67eac9ae6560fe63145f09712f9d7483e2ccf3ab3294d8",
+    "section": "6. 实验报告与提交要求；引用任务2—4的10道分析题",
+    "path": "assets/guides/experiment-2-dns.html"
+  },
+  "report_requirements": {
+    "RPT-1": "第6节实验环境：操作系统、Packet Tracer与Wireshark版本、实际抓包接口及真实DNS解析器IP。",
+    "RPT-2": "第6节问题回答与证据：完成任务2—4全部10道分析题，附相关配置、命令输出或报文字段截图，注明任务、测试编号及帧号；同一证据可供多题引用。",
+    "RPT-3": "第6节图的编号与名称：拓扑图、配置图、命令输出图和报文图按出现顺序编号，图下有图号和图名；回答引用对应图号，真实抓包注明帧号。",
+    "RPT-4": "第6节提交文件：报告、恢复正确配置的Packet Tracer工程及原始pcapng抓包；报告和附件命名、采集序号及对应帧号。附件提交核验与PDF评分分开，不能从仅收到PDF推断未交。",
+    "RPT-5": "沿用实验一的教师补充计分口径：每张问题图扣2分，同图多缺陷只算一张，最多6分；正文须有与图对应的引用和描述。仅整份报告无其他扣分时，原页确认普通中文正文段落首行无缩进扣3分，否则不启用。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {
+    "lower": 92,
+    "upper": 98,
+    "minimum_fraction": 0.8
+  },
+  "items": [
+    {
+      "criterion": "Packet Tracer配置与功能验证（任务2，第1—2题）",
+      "max_score": 30,
+      "grading_notes": [
+        "以第6节RPT-2明确引用的题目评分。DNS-Q1：直接IP、主域名和别名的ping结果及两次域名查询响应中的资源记录；DNS-Q2：DNS服务器IP更改后的测试结果、问题、处理及复测。任务1的拓扑/地址/记录配置用于理解证据，不把前文每一步变成独立扣分点。",
+        "核心回答基本正确即可；部分次要结果、字段或说明简略不扣。某题完全未答、核心结论与本人证据直接矛盾，或整组没有可定位的配置/命令/PDU依据，使用pt_answer_issue将全部一般问题合并扣2分，不逐题或逐测试累计。任务与测试可由上下文等价定位，不机械要求字面‘测试1’。",
+        "DNS-Q1的PT CNAME响应显示差异免扣：响应头ANCOUNT与PDU详情面板可见的Answer条数不一致（如ANCOUNT=2但只显示一条目标域名的A记录、未显示CNAME），不得仅据此扣记录缺失、配置错误、分析矛盾或截图不完整，也不计为问题图。不要求学生补出面板未显示的记录或专门解释此差异；其他独立明确问题仍按原规则处理。仅适用PT仿真，不扩展为真实网络抓包的通用豁免。",
+        "更改DNS地址后应按实际现象评分，接受客户端DNS设置、缓存等不同环境下有依据的排查和恢复；不强制每次ping成功或固定故障路径，不能以ICMP未回包直接断言名称解析失败。DNS地址更改分析和复测已在DNS-Q2核对，不再增加排障/小结扣分。",
+        "按指导书的实验域名和地址理解本人记录，但不另扣设备命名、姓名拼音格式、拓扑美观、工作区身份标签或逐步安装记录。只有这些问题使必答题核心判断与证据直接矛盾时，才并入该组一般问题。",
+        "完整配置验证和两题分析整体未提供扣5分，替代本项其他规则；整组无必要文字分析扣4分替代pt_answer_issue；有分析但整组完全无相关图扣3分。只有部分图缺失不按完全无图处理；全无文字与全无图不再据同一缺失扣证据联系。图片/整体内容缺失须查看原页。",
+        "单张图号/图名/引用/描述统一在第4项截图规则检查，不再作为PT-evidence-link重复扣。现有i简述两题与证据核对结果及页码；先分别检查，再去重。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "pt_task_absent",
+          "points": 5,
+          "max_occurrences": 1,
+          "description": "[RPT-2] PT配置验证及第1—2题分析整体未提供；替代本项其他扣分",
+          "requires_visual_evidence": true,
+          "exclusive_with": [
+            "pt_captures_absent",
+            "pt_answers_absent",
+            "pt_answer_issue"
+          ]
+        },
+        {
+          "id": "pt_captures_absent",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有文字分析，但整组完全没有相关配置、命令或PDU截图；部分缺图不适用",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "pt_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] PT第1—2题整组没有必要文字回答/分析，包括只有图无解释；替代局部问题",
+          "exclusive_with": [
+            "pt_answer_issue"
+          ]
+        },
+        {
+          "id": "pt_answer_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有分析但某题完全未答、核心结论直接矛盾，或整组无可定位实验依据；全部一般问题合并一次。PT CNAME响应的ANCOUNT与面板可见Answer条数不一致不扣分",
+          "requirement_ids": [
+            "DNS-Q1",
+            "DNS-Q2",
+            "PT-evidence-link"
+          ]
+        }
+      ]
+    },
+    {
+      "criterion": "真实网络DNS抓包分析（任务3，第3—8题）",
+      "max_score": 35,
+      "grading_notes": [
+        "任务3/4的真实查询目标为www.baidu.com与www.scu.edu.cn，不要求在公网解析PT内部实验域名。DNS-Q3：双方IP、传输层协议和端口；DNS-Q4：查询/响应ID及配对依据；DNS-Q5：两域名返回记录、权威性及ping实际使用的地址；DNS-Q6：别名判断和实际规范名；DNS-Q7：客户端查询方式及依据；DNS-Q8：首次/重复ping的DNS变化、缓存判断及依据。逐题核对，不因已在其他题扣分跳过后续题；所有一般问题仍合并一次2分。",
+        "有基本正确的核心回答，不因未抄全部记录/数值、未逐个子要点展开、措辞不同或篇幅短扣分。实际IP、ID、帧号、TTL、CNAME链和记录数量以本人报文为准；不把教师当前查到的公网结果当作唯一答案。",
+        "ID可用于配对，但结合查询名、类型和通信双方理解，不机械认为ID跨所有抓包全局唯一。AA判断响应权威性，RD表示请求递归、RA表示服务器支持递归；仅客户端抓包不要求证明解析器内部的完整迭代链。判断参考不变成逐字段新增扣分点。",
+        "重复ping可能不产生新的DNS查询，也可能仍有查询；如实记录并依据缓存/命令/报文合理解释即可，不要求固定现象或不存在的重复查询截图。不把ping连通失败等同DNS失败，不强迫所有网络报文都是UDP或固定记录值。",
+        "真实抓包帧号在正文、图中可读列表或明确标注中可定位即可；同一证据可供多题引用。全组帧号/证据关联完全缺失，并入dns_answer_issue一次2分（DNS-frame-link），不逐帧、逐图、逐题累计；普通图号/引用/图名缺陷归第4项，不重复扣。",
+        "任务3抓包与六题分析整体未提供扣8分替代全部细项；整组无必要文字分析扣4分替代dns_answer_issue；有分析但整组完全无相关抓包图扣3分。已按完全无图或无分析扣过的同一缺失，不再扣证据联系。仿真材料不能自动冒充真实抓包；疑似混用先核原页，若确证完全未提供真实任务按整体缺失处理，局部矛盾只并入一般问题，不双扣。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "dns_task_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 真实DNS抓包及第3—8题分析整体未提供；替代本项其他扣分",
+          "requires_visual_evidence": true,
+          "exclusive_with": [
+            "dns_captures_absent",
+            "dns_answers_absent",
+            "dns_answer_issue"
+          ]
+        },
+        {
+          "id": "dns_captures_absent",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有文字分析，但任务3整组完全没有相关真实抓包图；部分缺图不适用",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "dns_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 第3—8题整组没有必要文字回答/分析，包括只有图无解释；替代局部问题",
+          "exclusive_with": [
+            "dns_answer_issue"
+          ]
+        },
+        {
+          "id": "dns_answer_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有分析但某题完全未答、核心结论直接矛盾，或整组无具体报文/帧号依据；一般问题合并一次",
+          "requirement_ids": [
+            "DNS-Q3",
+            "DNS-Q4",
+            "DNS-Q5",
+            "DNS-Q6",
+            "DNS-Q7",
+            "DNS-Q8",
+            "DNS-frame-link"
+          ]
+        }
+      ]
+    },
+    {
+      "criterion": "nslookup查询与别名复核（任务4，第9—10题）",
+      "max_score": 25,
+      "grading_notes": [
+        "DNS-Q9：A与CNAME查询结果的区别；DNS-Q10：两个域名CNAME查询的实际结果及其是否支持任务3的判断。按两题实质回答评分，不把四条命令的每次操作拆成独立扣分。",
+        "接受真实记录、无所查询类型的记录或其他实际响应及合理说明，不强制两个域名都有CNAME，也不强制A查询响应只能包含A记录。报文/命令结果依本人采集环境，不把不同时间/解析器导致的结果变化直接当作答错或造假。",
+        "任务3与任务4可共用证据，但应能区分对应查询；不强求每题一张新图或nslookup与ping解析地址完全相同。判断与本人证据直接矛盾、某题明确完全未答、整组无可定位的查询结果/报文或帧号依据时，所有一般问题合并扣2分。",
+        "帧号已在图中可读即接受；全组定位缺失归LOOKUP-frame-link，与图号/图名/正文引用缺失区分。相同图号缺陷只在第4项计一次；任务3某题已覆盖的同一判断缺陷不换题号再扣，独立未答的第9/10题仍须检查，在i中简述重复事实的归属。",
+        "任务4查询复核和两题分析整体未提供扣8分替代全部细项；整组无必要文字分析扣4分替代lookup_answer_issue；有分析但整组完全无相关命令或抓包图扣3分。已有可用命令图但少部分抓包证据，不按完全无图处理，仅明显全组无报文关联时合并一般问题。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "lookup_task_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-2] nslookup查询复核及第9—10题分析整体未提供；替代本项其他扣分",
+          "requires_visual_evidence": true,
+          "exclusive_with": [
+            "lookup_captures_absent",
+            "lookup_answers_absent",
+            "lookup_answer_issue"
+          ]
+        },
+        {
+          "id": "lookup_captures_absent",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有文字分析，但任务4整组完全没有相关命令或抓包图；部分缺图不适用",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "lookup_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 第9—10题整组没有必要文字回答/分析，包括只有图无解释；替代局部问题",
+          "exclusive_with": [
+            "lookup_answer_issue"
+          ]
+        },
+        {
+          "id": "lookup_answer_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有分析但某题完全未答、核心结论直接矛盾，或整组无具体查询/报文/帧号依据；一般问题合并一次",
+          "requirement_ids": [
+            "DNS-Q9",
+            "DNS-Q10",
+            "LOOKUP-frame-link"
+          ]
+        }
+      ]
+    },
+    {
+      "criterion": "实验环境与报告编排",
+      "max_score": 10,
+      "grading_notes": [
+        "RPT-1要求操作系统、Packet Tracer版本、Wireshark版本、实际抓包接口和真实DNS解析器IP，正文或可读截图均可说明；不苛求版本的小修订号或特定操作系统。明确缺项全部合并environment_record_missing一次2分，不因接口/解析器信息缺失再在分析项重复扣同一事实。",
+        "本指导书第6节没有要求实验一的资料来源、资料帮助、两道小结或通用排障栏目，不套用source_and_help_missing、reflection_answers_missing等规则。排查/处理/复测属于第2题而非额外报告栏目。",
+        "RPT-3的图号、图名与引用，以及RPT-5沿用的对应文字描述统一按实际问题图计数：每图2分，1/2/3张及以上扣2/4/6分。同图多个缺陷只算一张；同一图用于多题或重复引用只计一次。图1、图1-1等逻辑清楚的顺序编号均可；不苛求标题措辞。图中可读的关键观察不要求全文抄写，但仅图下名称不等于正文引用/分析。",
+        "图名在原图下方能清楚对应即可，不机械比较像素距离。明显无图号/图名、编号无法对应、无正文引用或无必要对应描述，才在figures列出FIG-numbering/FIG-caption/FIG-reference/FIG-description。计数覆盖拓扑、配置、命令和报文图；须查看原页，不能根据OCR缺字或文本序列猜布局。",
+        "figures使用原页定位p.N#imageK（N原PDF页码，K该页实际实验图从上到下、同高从左到右序号，不计页眉图标），记录最早三张不同问题图及其缺失要素与理由，顶层requirements取并集。无其他明确问题则不写该规则；全无图不再扣不存在图的编号。整组无分析已扣过时，不再就同一无文字扣FIG-description，独立图号/图名/引用缺陷仍可计数。",
+        "先分别核对环境、三组题目和图编排，再去重；一项已扣不能跳过另一项。现有各项i简述题目/证据核对与页码，合格内容可合并简写；同一事实因已归另一规则不另扣时写明归属。第6节提交文件另列教师核验：只收到PDF不证明学生未交pkt/pcapng，不伪造PDF页码支持附件缺失，不在本PDF100分内自动扣附件缺交/命名/恢复状态。",
+        "RPT-5的BODY-first-line-indent：全部其他扣分清单为空时，查看普通中文多行叙述正文；确认首行与后续行左缘对齐、没有首行缩进，才扣3分一次且为全报告唯一扣分。不检查标题、题干、列表、代码、表格、图注或截图内文字，不苛求精确两个汉字；单行/不清楚不扣。已有任何扣分则缩进不激活。",
+        "没有明确问题允许100分，不封顶98、不强制最低扣分。92—98超过80%只作观察；发布均分90下限只由程序透明统一偏移实现。两遍盲评比较事实、要求编号及实际计分图，不凭同分宣告正确，不平均有分歧的成绩。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "environment_record_missing",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1] 操作系统、PT/Wireshark版本、真实接口或解析器IP明确缺项；全部合并一次",
+          "requirement_ids": [
+            "ENV-OS",
+            "ENV-PT",
+            "ENV-Wireshark",
+            "ENV-interface",
+            "ENV-resolver"
+          ]
+        },
+        {
+          "id": "screenshot_documentation_issue",
+          "points": 2,
+          "max_occurrences": 3,
+          "description": "[RPT-3] 已提交实验图缺顺序图号、图下图名、正文引用或对应描述；按教师RPT-5每图2分封顶6分",
+          "requires_visual_evidence": true,
+          "requirement_ids": [
+            "FIG-numbering",
+            "FIG-caption",
+            "FIG-reference",
+            "FIG-description"
+          ],
+          "count_by": "figure"
+        },
+        {
+          "id": "body_first_line_indent_missing",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-5] 仅全报告无其他扣分时，原页确认普通中文正文首行无缩进；全报告唯一扣分",
+          "requires_visual_evidence": true,
+          "only_if_no_other_deductions": true,
+          "requirement_ids": [
+            "BODY-first-line-indent"
+          ]
+        }
+      ]
+    }
+  ]
+}
