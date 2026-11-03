@@ -211,3 +211,4 @@ python scripts/check_stable_version.py --rubric assets/rubrics/experiment-1-web-
 - **教师签名属于"每台机器自己配"的项目，不在包里**：首次使用用 `python3 scripts/bootstrap.py` 查看状态。可配置带 Ink 的 PDF，或透明 PNG；支持 `--signature-file`、兼容参数 `--signature-pdf`、`EXPERIMENT_REPORT_GRADER_SIGNATURE_FILE`（旧 `_SIGNATURE_PDF` 也兼容）、`config/local.json` 中的 `signature_file`，或放入 `assets/signature/`。`prepare` 会验证文件；图片只接受带透明通道的 PNG，写回时维持原图、不抠图不重绘，并在批准写回前检查签名区域遮挡。
 - **换机器要改的路径不必改代码**：签名模板、手写字体、解释器、Node、OCR 辅助程序都可按 `--参数` → `EXPERIMENT_REPORT_GRADER_*` 环境变量 → 技能目录下 `config/local.json`（从 `config/defaults.example.json` 复制）的顺序指定。迁移与自查清单见 `references/portability.md`，装包流程见本页开头「0. 在一台新机器上安装」。
 - **写回样式由教师逐份选择**：审核面板可选择原页手写分项评语、逐页画勾、教师签名、成绩栏手写分数，以及反馈页放首页或末页。点击“批准并直接写回 PDF”后，系统先备份原件再写回；签名文件仍须在批改前通过固定前置检查，签名开关只决定本次是否加签。可用 `--signature-file`（兼容 `--signature-pdf`）和 `--score-font` 覆盖配置。
+- 当手写评语、画勾、签名和手写分数都关闭时，写回只插入反馈页，不再要求源 PDF 含有可搜索的“成绩评定”或教师签名标签；任一原页批注开启时，仍执行评议页定位与防重叠检查。

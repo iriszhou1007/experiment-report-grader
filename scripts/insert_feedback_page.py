@@ -388,7 +388,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-review-marks",
         action="store_true",
-        help="prepend the feedback sheet only, without checkmarks, signature or score",
+        help="insert the feedback sheet only, without checkmarks, signature or score",
     )
     parser.add_argument("--no-checkmarks", action="store_true")
     parser.add_argument("--no-signature", action="store_true")
@@ -425,7 +425,16 @@ def main() -> None:
     marked_pdf = temp_root / f"marked-{uuid4().hex}.pdf"
     annotation: dict | None = None
     try:
-        if args.no_review_marks:
+        # With every original-page annotation disabled, there is no reason to inspect the
+        # source PDF for a review/score label. Some valid report templates have no searchable
+        # “成绩评定” text at all; in this mode we only insert the feedback sheet.
+        feedback_only = args.no_review_marks or (
+            args.no_checkmarks
+            and args.no_signature
+            and args.no_score
+            and not args.handwritten_comments
+        )
+        if feedback_only:
             body = source
         else:
             score_text = "" if args.no_score else score_for_report(data)

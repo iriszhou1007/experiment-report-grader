@@ -84,6 +84,8 @@ Use the local review panel for PDF write-back. It offers per-report switches for
 
 For an approved PDF mutation, read [references/pdf-writeback.md](references/pdf-writeback.md). The teacher's signature is a per-machine asset and is deliberately not packaged: configure either an annotated PDF or a tightly cropped transparent PNG by flag, environment variable, `config/local.json`, or `assets/signature/`. `prepare` requires a usable asset before grading starts, even when a particular report will not receive a signature. The per-report signature switch controls only whether the asset is applied. The output verifier refuses to write if marks overlap existing content. Read [references/review-schema.md](references/review-schema.md) only when debugging review JSON.
 
+When writing an approved report, if all original-page mark options are off (handwritten comments, checkmarks, signature, and handwritten score), insert only the feedback page. Do not search the source PDF for “成绩评定” or teacher-signature labels and do not run the original-page mark verifier in this mode. If any mark option is enabled, locate the review page and run the normal label and overlap checks before replacing the source PDF.
+
 ## Grading calibration
 
 - **Score by requirement, not by capture value.** Give credit for data found in prose or readable screenshots; when a requirement asks for explanation, raw packet screenshots alone do not supply it. A Wireshark capture holds hundreds of values; the student need not transcribe them all. Extra frames and field readouts are not defects. Counting transcribed-versus-visible values is not a measure of anything.
