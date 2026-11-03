@@ -196,7 +196,12 @@ def prepend_feedback(source: Path, feedback: Path, output: Path, position: str =
     else:
         raise ValueError(f"unsupported feedback position: {position}")
     for page in ordered:
-        writer.add_page(page)
+        added_page = writer.add_page(page)
+        # Named internal links are repaired during PdfWriter.write(). pypdf's
+        # add_named_destination expects the target page MediaBox to be an array,
+        # but some valid PDFs store it as an indirect object. Resolve and write
+        # the same rectangle directly so link repair works without changing layout.
+        added_page.mediabox = added_page.mediabox
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("wb") as stream:
         writer.write(stream)

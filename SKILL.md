@@ -86,6 +86,8 @@ For an approved PDF mutation, read [references/pdf-writeback.md](references/pdf-
 
 When writing an approved report, if all original-page mark options are off (handwritten comments, checkmarks, signature, and handwritten score), insert only the feedback page. Do not search the source PDF for “成绩评定” or teacher-signature labels and do not run the original-page mark verifier in this mode. If any mark option is enabled, locate the review page and run the normal label and overlap checks before replacing the source PDF.
 
+When combining feedback with source pages, resolve each copied page's MediaBox to a direct rectangle before writing. This avoids pypdf failures while repairing named internal links in PDFs that store page boxes as indirect objects; preserve the links and the original page dimensions.
+
 ## Grading calibration
 
 - **Score by requirement, not by capture value.** Give credit for data found in prose or readable screenshots; when a requirement asks for explanation, raw packet screenshots alone do not supply it. A Wireshark capture holds hundreds of values; the student need not transcribe them all. Extra frames and field readouts are not defects. Counting transcribed-versus-visible values is not a measure of anything.
