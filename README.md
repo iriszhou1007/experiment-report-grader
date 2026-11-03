@@ -78,6 +78,10 @@ Skill 默认采用整数分。模型不再凭整体印象选分数档，而是�
 
 “实验2：DNS服务器配置与DNS协议分析”使用[正式指导书](assets/guides/experiment-2-dns.html)、[教师版评分细则](references/experiment-2-dns.md)和 `assets/rubrics/experiment-2-dns.json`（正式发布v1.1）。分项为Packet Tracer配置与验证30分、真实DNS抓包分析35分、nslookup查询复核25分、环境与报告编排10分。十道分析题按本人命令、报文、帧号及实际DNS环境核对；不要求固定公网IP、CNAME链、响应记录数或ping结果。已明确的Packet Tracer CNAME响应中ANCOUNT与可见Answer条数不一致不扣分。RPT-5沿用教师补充的截图编排和条件性首行缩进规则。`.pkt`工程和`.pcapng`附件提交情况与PDF评分分开核验；仅凭报告PDF或当前文件夹不能推断未提交附件，也不据此扣PDF分。实验二重新评分须明确选择这份评分标准，不能套用实验一的题目要求。
 
+“实验3：UDP协议分析与TCP连接管理”使用[指导书](assets/guides/experiment-3-udp-tcp.html)、[评分细则](references/experiment-3-udp-tcp.md)和 `assets/rubrics/experiment-3-udp-tcp.json`（规则v1.1；细则仍为审阅稿，正式评分前请教师确认）。分项30/20/25/15/10，按新版指导书20题核对；实际网络与报文值不设固定答案，UDP第7题按“端口匹配”即可满足配对依据的宽松口径评分。本实验不要求提交`.pkt`或`.pcapng`。
+
+“实验4：ICMP协议分析”使用[指导书](assets/guides/experiment-4-icmp.html)、[教师版评分细则](references/experiment-4-icmp.md)和 `assets/rubrics/experiment-4-icmp.json`（规则v1.0）。分项25/30/35/10，按新版指导书17题核对。IP、路由、跳数、TTL与报文数量以实际结果为准；不因环境差异或未收到预期响应自动扣分，不要求虚构无法观测的数据。实验3、4均须选择对应的评分标准，不能沿用其他实验的题目或扣分记录。
+
 仅文字模式仍会把 OCR 识别结果并入证据，但 OCR 不保留可靠的页面布局。默认评分表的 `hard_to_read` 档因此设有视觉扣分门槛：只有实际打开相关 PDF 页面并记录视觉核验页后才能选择。这个检查按扣分触发，不会要求逐份视觉复核整批报告。
 
 ## 3. 评分前选择报告检查模式

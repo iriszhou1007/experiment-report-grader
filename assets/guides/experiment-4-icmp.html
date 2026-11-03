@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>实验4：ICMP协议分析</title><style>
+:root{
+  --blue:#1f5fae;
+  --blue-dark:#17467f;
+  --blue-light:#eef5fc;
+  --blue-soft:#f7fbff;
+  --text:#1f2937;
+  --muted:#667085;
+  --line:#dbe6f1;
+  --bg:#f5f8fc;
+  --white:#ffffff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.75;
+}
+.wrapper{
+  width:min(1080px,calc(100% - 36px));
+  margin:0 auto;
+  padding:28px 0 60px;
+}
+.hero{
+  background:linear-gradient(135deg,var(--blue-dark),var(--blue));
+  color:#fff;
+  border-radius:18px;
+  padding:38px 42px;
+  box-shadow:0 16px 40px rgba(31,95,174,.14);
+}
+.hero .tag{
+  font-size:13px;
+  letter-spacing:.08em;
+  opacity:.82;
+  margin-bottom:8px;
+}
+.hero h1{
+  margin:0 0 12px;
+  font-size:40px;
+  line-height:1.25;
+}
+.hero p{
+  margin:0;
+  max-width:860px;
+  color:rgba(255,255,255,.92);
+  font-size:16px;
+}
+.section{
+  margin-top:24px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:26px 28px;
+}
+.section h2{
+  margin:0 0 16px;
+  font-size:24px;
+  color:var(--blue-dark);
+  padding-bottom:10px;
+  border-bottom:2px solid var(--blue-light);
+}
+.section h3{
+  margin:22px 0 10px;
+  font-size:19px;
+  color:var(--blue);
+}
+p{margin:8px 0}
+ul,ol{margin:8px 0 8px 1.2em}
+li{margin:5px 0}
+.meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+.meta .box{
+  background:var(--blue-soft);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px 18px;
+}
+.meta .box strong{
+  display:block;
+  color:var(--blue-dark);
+  margin-bottom:4px;
+}
+.flow{
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr;
+  gap:10px;
+  align-items:center;
+  margin-top:18px;
+}
+.step{
+  background:var(--blue-soft);
+  border:1px solid #cfe0f1;
+  border-radius:12px;
+  padding:16px 12px;
+  text-align:center;
+  min-height:112px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.step b{
+  display:block;
+  color:var(--blue);
+  margin-bottom:6px;
+}
+.arrow{
+  text-align:center;
+  color:#8da9c4;
+  font-size:26px;
+}
+.task{
+  margin-top:22px;
+  border:1px solid var(--line);
+  border-left:4px solid var(--blue);
+  border-radius:12px;
+  padding:20px 22px;
+  background:#fff;
+}
+.task h3{
+  margin:0 0 12px;
+  color:var(--blue-dark);
+}
+.label{
+  font-size:13px;
+  font-weight:700;
+  color:var(--blue);
+  margin-top:12px;
+}
+.verify{
+  background:var(--blue-soft);
+  border:1px solid #d6e5f4;
+  border-radius:10px;
+  padding:12px 14px;
+  margin-top:10px;
+}
+.questions{
+  background:#f4f8fd;
+  border:1px solid #d7e5f3;
+  border-radius:10px;
+  padding:14px 16px;
+  margin-top:12px;
+}
+.url{
+  display:block;
+  background:#0f2740;
+  color:#eef6ff;
+  padding:12px 14px;
+  border-radius:8px;
+  font-family:Consolas,Monaco,monospace;
+  overflow-wrap:anywhere;
+  margin:10px 0 12px;
+  text-decoration:underline;
+}
+.url:hover{color:#fff}
+.note{
+  margin-top:16px;
+  padding:12px 14px;
+  border-radius:9px;
+  background:#f8fbff;
+  border:1px dashed #b9d1e8;
+  color:#46586a;
+}
+.report-list{
+  margin:12px 0 0;
+  padding-left:1.7em;
+}
+.report-list li{
+  padding-left:4px;
+  margin:10px 0;
+}
+.report-list strong{color:var(--blue-dark)}
+.key-rule{color:#a32121;font-weight:700}
+.footer{
+  text-align:center;
+  color:#7a8795;
+  font-size:13px;
+  margin-top:24px;
+}
+code{
+  background:#f1f5f9;
+  border:1px solid #e2e8f0;
+  border-radius:5px;
+  padding:1px 5px;
+  font-family:Consolas,Monaco,monospace;
+}
+@media(max-width:860px){
+  .hero h1{font-size:30px}
+  .meta{grid-template-columns:1fr}
+  .flow{display:block}
+  .step{min-height:auto;margin:10px 0}
+  .arrow{transform:rotate(90deg);height:28px}
+}
+
+
+.hero h1{font-size:32px}.hero{padding:30px 34px}.section{padding:22px 26px}body{font-size:15px;line-height:1.75}
+.task{padding:18px 20px;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #dbe6f1;padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef5fc;color:#17467f}tbody tr:nth-child(even){background:#fbfdff}figure{margin:16px 0}figure img{display:block;width:100%;height:auto;border:1px solid #dbe6f1;border-radius:10px}figcaption{font-size:13px;color:#667085;text-align:center;margin-top:8px}.badge{display:inline-block;background:#eef5fc;color:#17467f;border:1px solid #cfe0f1;border-radius:5px;padding:1px 7px;font-size:12px;margin-right:8px}.questions li{margin:10px 0}.lead{font-weight:700;color:#17467f}.compact li{margin:4px 0}.references{font-size:13px;color:#667085;overflow-wrap:anywhere}a{color:#1f5fae}code{overflow-wrap:anywhere}.flow{grid-template-columns:repeat(4,1fr)}.step{min-height:90px}.note strong{color:#17467f}.print-note{font-size:13px;color:#667085}@media(max-width:620px){.wrapper{width:calc(100% - 20px);padding-top:12px}.hero{padding:24px 20px}.hero h1{font-size:25px}.section{padding:18px 16px}.task{padding:16px 14px}.section h2{font-size:21px}th,td{padding:8px}table{min-width:650px}}
+
+.flow{grid-template-columns:repeat(3,1fr)}.questions h3{margin-top:20px}.section h3{color:#17467f}.scope{border-left:4px solid #1f5fae}.small{font-size:13px;color:#667085}@media(max-width:620px){.flow{grid-template-columns:1fr}.step{min-height:0}}
+
+/* Retain the document's blue headings and title banner in printed/PDF output. */
+@media print {
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body { background: #fff; }
+  .wrapper { width: 100%; padding: 0; }
+  .hero, .section { box-shadow: none; }
+  .hero {
+    background-color: #17467f !important;
+    background-image: linear-gradient(135deg, #17467f, #1f5fae) !important;
+    color: #fff !important;
+    padding: 15px;
+  }
+  .hero h1 { color: #fff !important; font-size: 32px; }
+  .hero p, .hero .tag { color: #fff !important; }
+  .section h2, .section h3 { color: #17467f !important; }
+  .section h2 { border-bottom-color: #dbe6f1 !important; }
+  .label, .step b { color: #1f5fae !important; }
+  th { color: #17467f !important; background: #eef5fc !important; }
+  .section, .task { break-inside: auto; }
+  .section h2, .label, figcaption { break-after: avoid; }
+  .verify, .note, figure, tr { break-inside: avoid; }
+  .table-wrap { overflow: visible; }
+  table { min-width: 0 !important; font-size: 11px; }
+  th, td { padding: 6px; }
+  .section { margin-top: 14px; }
+  a { color: #17467f; text-decoration: none; }
+}
+
+.flow{grid-template-columns:repeat(2,1fr)}@media(max-width:620px){.flow{grid-template-columns:1fr}}
+
+.task > ol{margin:8px 0 14px;padding-left:1.7em}.task > ol > li{margin:7px 0}.task > .label{margin-top:16px}
+
+table caption{caption-side:top;text-align:center;font-weight:700;color:#17467f;padding:0 0 8px;break-after:avoid}
+
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;line-height:1.6;font-size:14px}
+pre code{padding:0;border:0;background:transparent}
+.task h4{font-size:15px;color:#1f5fae;margin:16px 0 6px}
+.questions h4{margin:0 0 6px;color:#17467f}
+.task .questions ol{padding-left:1.7em;margin-left:0}
+.section>ol{padding-left:1.7em;margin-left:0}
+.hero h1{font-size:30px}.hero .tag{letter-spacing:.04em}
+@page{size:A4;margin:15mm}
+@media print{body{font-size:11pt;line-height:1.6}.hero h1{font-size:22pt}.section{padding:14px 16px}.section h2{font-size:16pt}.task h3{font-size:13pt}.task h4,.questions h4{font-size:11pt}.task{padding:12px 14px}.questions{padding:10px 12px}p,li{orphans:2;widows:2}h2,h3,h4{break-after:avoid}pre{font-size:9pt;break-inside:avoid}.questions li{margin:8px 0}}
+
+.task pre{margin:10px 0}.task p{overflow-wrap:anywhere}.table-wrap{overflow-x:auto}caption{caption-side:top;text-align:left;font-weight:600;color:#17467f;padding:0 0 10px}code{overflow-wrap:anywhere}
+</style></head><body><div class="wrapper"><header class="hero"><div class="tag">计算机网络课程设计 · 实验指导书</div>
+<h1>实验4：ICMP协议分析</h1>
+<p>捕获Ping与Tracert产生的报文，分析ICMP回显、差错报告及路径探测过程。</p></header>
+<section class="section"><h2>1. 实验目标</h2><ol><li>识别ICMP回显请求与应答，分析报文配对、数据内容和往返时间。</li><li>通过改变Ping数据长度与IPv4生存时间，观察IP分片及ICMP反馈。</li><li>分析Tracert的探测报文与响应，理解路径探测原理及结果的含义。</li></ol></section><section class="section"><h2>2. 实验环境</h2>
+<div class="table-wrap"><table><caption>表1 实验环境与工具</caption><thead><tr><th>部分</th><th>环境与工具</th></tr></thead><tbody>
+<tr><td>A：Ping报文与参数测试</td><td>Windows 11；命令提示符；Wireshark；真实网络接口</td></tr>
+<tr><td>B：Tracert路径探测</td><td>Windows 11；tracert命令；Wireshark；真实网络接口</td></tr>
+</tbody></table></div>
+<p>本实验分析IPv4承载的ICMP报文，命令以Windows为例。其他系统应查阅本机帮助，使用等效参数；路径探测应选择ICMP探测方式。</p>
+<p>测试目标使用<code>www.scu.edu.cn</code>。若使用该目标时未获得实验所需的回显应答，或路径中的中间设备未返回TTL耗尽触发的ICMP Time Exceeded响应，则更换为机房指定或经验证能够返回相应报文的目标，并在答案中注明实际目标。普通Ping测试应尽量获得可配对的请求与应答；指定较小初始TTL的测试应尽量获得可分析的ICMP Time Exceeded响应。首次测试记录实际目标IPv4地址，后续比较测试尽量使用同一IPv4地址；更换目标时说明原因。</p>
+</section><section class="section"><h2>3. A部分：Ping报文与参数测试</h2><article class="task"><h3>任务1：Ping数据报捕获与分析</h3><h4>任务要求</h4><ol><li>捕获向目标发送5次回显请求的过程，分析实际收到的响应。</li><li>查看ICMP字段、数据内容及对应IPv4首部，并计算一组请求与应答的往返时间。</li></ol><h4>测试要求</h4><ol><li>启动Wireshark，在实际通信接口上开始抓包，执行<code>ping -4 -n 5 www.scu.edu.cn</code>，命令结束后停止抓包。</li><li>使用显示过滤器<code>icmp</code>，定位本次通信的请求与应答，查看Type、Code、Checksum、Identifier和Sequence Number。</li><li>选取一组对应的请求与应答，查看数据部分的长度、十六进制字节与字符内容，以及IPv4首部中的Header Checksum。</li><li>定位首次收到应答的请求，查看该请求与对应应答的捕获时间，并与Ping命令输出对照。</li></ol><p><strong>作答截图：</strong>Ping命令输出；请求与应答列表；所选报文的ICMP字段、数据字节、IPv4校验和字段；计算往返时间所用报文的帧号与时间。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="1"><li>本次Ping使用了哪些ICMP报文？列出请求与应答的Type和Code。</li><li>所选请求的数据部分有多少字节，内容是什么？对应应答的数据部分有何变化？</li><li>首次收到应答的请求，其往返时间是多少？用抓包时间计算，并与Ping显示的结果比较。</li><li>IPv4首部已有Header Checksum，为什么ICMP仍需要Checksum？二者的校验范围有何不同？</li><li>Identifier和Sequence Number有何作用？本次各组请求与应答中，这两个字段如何对应和变化？</li></ol></div></article><article class="task"><h3>任务2：Ping数据长度与TTL测试</h3><h4>任务要求</h4><ol><li>改变回显请求的数据长度，检查实际捕获的IPv4报文是否发生分片。</li><li>改变请求的初始TTL，观察响应类型、发送方和差错报文内容。</li></ol><h4>测试要求</h4><ol><li>重新开始抓包，执行<code>ping -4 -n 5 -l 2500 www.scu.edu.cn</code>，命令结束后停止抓包。</li><li>使用显示过滤器<code>ip.proto == 1</code>查看本次通信，包括可能出现的IPv4分片。核对相关报文的Identification、More fragments（MF）、Fragment Offset、Total Length和Header Length；注意每片IPv4总长度包含该片IPv4首部，Fragment Offset字段以8字节为单位，工具可能换算为字节显示；发生分片时，查看属于同一数据报的各个分片及重组结果。</li><li>另行抓包，执行<code>ping -4 -n 5 -i 2 www.scu.edu.cn</code>，查看请求与实际响应。若未出现ICMP Time Exceeded响应，再将TTL设为1补测。</li><li>选取一个初始TTL设置为2（必要时为1）的ICMP回显请求，以及由该请求TTL耗尽触发的ICMP Time Exceeded响应，查看响应发送方、Type、Code和响应中携带的原始报文内容。</li><li>逐步增大<code>-i</code>后的TTL值，保持目标及其他参数不变，每次发送5个请求，测试至收到目标的回显应答或TTL达到30即停止；比较各次测试结果。</li></ol><p><strong>作答截图：</strong>大报文与各次TTL测试的命令输出；分片判断所用IPv4字段及重组结果（发生分片时）；TTL耗尽触发的ICMP Time Exceeded响应的发送方、Type、Code及携带的原始报文。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="6"><li>使用<code>-l 2500</code>发送2500字节ICMP数据时，所选请求是否发生IPv4分片？给出判断依据；发生分片时，列出各片长度、偏移及MF值，并验证重组后的数据长度。注明长度是IPv4总长度、IPv4负载长度还是ICMP数据长度，偏移注明采用字段值还是字节值。</li><li>TTL设为2时收到什么响应，由谁发送？响应的Type和Code是什么，反映了什么情况？若补测TTL为1，分别说明结果。</li><li>本次测试中，首次收到目标回显应答时设置的初始TTL是多少？为什么该值不能直接作为其他主机或其他时刻测试的固定值？若测试至TTL=30仍未收到目标回显应答，据实说明结果。</li><li>历史上有哪些利用ICMP或Ping的网络攻击？举出两类，简述其原理及与本实验正常测试的区别。</li></ol></div></article></section><section class="section"><h2>4. B部分：Tracert路径探测</h2><article class="task"><h3>任务3：Tracert数据报捕获与分析</h3><h4>任务要求</h4><ol><li>捕获Tracert向同一目标逐步探测路径的过程。</li><li>比较探测请求与不同节点的响应，将抓包结果与命令输出对应。</li></ol><h4>测试要求</h4><ol><li>重新开始抓包，执行<code>tracert -4 -d www.scu.edu.cn</code>，待命令结束后停止抓包。</li><li>使用显示过滤器<code>icmp</code>，定位本次路径探测报文，按请求的IPv4 TTL分组，查看各组的探测次数及Identifier、Sequence Number。</li><li>比较Tracert与任务1普通Ping请求的Type、Code和数据部分。汇总实际收到的响应，查看各响应的IPv4源地址、ICMP类型及代码，并与Tracert输出对应。</li><li>选取一个Time Exceeded响应，展开外层IPv4、ICMP及其中携带的原始报文，定位对应的探测请求，比较外层IPv4与内嵌IPv4的TTL。</li><li>查看探测停止前的报文，判断本次是否获得到达目标的响应；命令输出出现<code>*</code>时，对照相应探测请求与响应。</li></ol><p><strong>作答截图：</strong>Tracert完整输出；探测请求的TTL分组及各类响应；首个Time Exceeded响应；所选差错响应与原始请求的对应字段、外层及内嵌IPv4首部；判断是否到达目标所用报文。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="10"><li>Tracert与普通Ping发送的报文，其Type、Code和数据部分有何异同？</li><li>本次共使用了多少个不同的初始TTL？各TTL对应多少个探测请求，TTL如何变化？</li><li>本次收到了哪些源IP地址返回的响应？按Type和Code归类，说明各类响应的产生原因。</li><li>捕获到的第一个Time Exceeded响应由谁发送？它与Tracert输出中的哪一跳对应？</li><li>所选Time Exceeded响应对应哪个探测请求？给出配对依据。</li><li>所选响应外层IPv4与其中原始IPv4的TTL分别是多少？它们各属于哪一个报文？</li><li>Tracert如何判断已到达目标？本次是否到达，依据是什么？</li><li>Tracert输出中的星号表示什么？仅凭某一跳出现星号，能否判断该跳之后的网络均不可达？</li></ol></div></article></section><section class="section"><h2>5. 实验报告要求</h2><ol><li><strong>问题作答。</strong>按任务顺序回答全部17道思考问题，在对应答案处附必要的命令输出与抓包截图。报文截图应能辨认帧号、通信端点和分析字段。计算题写明所用数据与过程，理论题说明原理。同一证据可以支持多题，不重复截图。</li><li><strong>图的编号与名称。</strong>所有截图和图示按出现顺序连续编号，在图下方标注图号与图名，如“图1 Ping请求与应答”。正文引用相应图号。</li><li><strong>结果与问题。</strong>按实际捕获结果作答。未出现预期现象时，说明实际现象、检查依据、处理方法及验证结果；不得用推测值替代实测结果。完成适用的补测、检查或更换目标后仍未获得预期报文，可记录实际结果和已尝试的检查；依赖该报文的问题注明无法观测的字段，并给出基本原理说明，不要求编造数值或反复更换目标直到成功。</li><li><strong>提交文件。</strong>提交实验报告，文件命名为“学号_姓名_实验4”。</li></ol></section></div></body></html>

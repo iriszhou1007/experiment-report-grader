@@ -1,0 +1,197 @@
+{
+  "rubric_id": "experiment-3-udp-tcp-v1.1-obvious-defects",
+  "title": "实验3：UDP协议分析与TCP连接管理（审阅稿v1.1）",
+  "source_requirements": {
+    "file": "实验3_UDP协议分析与TCP连接管理_实验指导书(5).html",
+    "path": "assets/guides/experiment-3-udp-tcp.html",
+    "sha256": "23300a5b04b5ec2c1b9edff6508076eff1d4da03fcb0518aa6f86ca6159770da",
+    "section": "5. 实验报告要求；引用任务1—4全部20道思考问题及对应必要结果与截图"
+  },
+  "report_requirements": {
+    "RPT-1": "第5节问题作答：按任务顺序回答全部20题，答案处附必要结果与截图；报文图可辨认端点、帧号及分析字段；理论题说明原理依据，计算题写推导；同一证据可支持多题，不重复截图。",
+    "RPT-2": "第5节图的编号与名称：全部截图和图示按出现顺序连续编号，图下标注图号、图名，正文引用相应图号。",
+    "RPT-3": "第5节问题处理：遇到问题时说明实际现象、处理方法及验证结果。没有实际问题时不要求虚构故障或另写排障栏目；新版第9/10题是时间差及长度比较，不再要求旧版的其他UDP方法或未捕获报文原因。",
+    "RPT-4": "第5节提交文件：提交实验报告，文件命名为学号_姓名_实验3。命名单列教师核验，不自动计入本PDF100分；指导书未要求提交pkt或pcapng。",
+    "RPT-5": "沿用前两次实验的教师补充计分口径：图须有必要对应文字描述，每张问题图扣2分，同图多缺陷只计一张，封顶6分。仅全报告无其他扣分时，原页确认普通中文多行正文首行无缩进扣3分，否则不启用。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {"lower": 92, "upper": 98, "minimum_fraction": 0.8},
+  "items": [
+    {
+      "criterion": "UDP协议分析（任务1，第1—10题）",
+      "max_score": 30,
+      "grading_notes": [
+        "RPT-1引用新版任务1十题：UDP-Q1首部字段/字节数/十六进制及总长度；UDP-Q2 Length及实际验证；UDP-Q3 IPv4总长度/首部长度与UDP长度关系；UDP-Q4仅按UDP字段范围求数据最大长度；UDP-Q5源端口最大值及依据；UDP-Q6 IPv4 Protocol名称/号及字节；UDP-Q7同次请求响应的端点与配对；UDP-Q8校验和伪首部；UDP-Q9所选请求响应的时间差及所含开销；UDP-Q10两者UDP Length与数据长度的比较。逐题核对后才去重，一题已有基本正确的核心回答不按完全未答处理；不再要求旧第9题的其他UDP方法或旧第10题的未捕获原因。",
+        "一般问题仅限某题明确完全未答、核心结论与协议或本人证据直接矛盾、整组完全无可定位的本人报文依据，或理论/计算回答整组均无原理依据、推导或实际验证。全部合并udp_answer_issue一次2分；少量字段或编码未抄全、个别推导简略、未逐子问展开不扣。正确公式、简短代入或可读图中数值足以支撑即可，不要求逐字复述指导书。",
+        "判断参考而非新增扣分清单：应用数据先封装为UDP数据报，再作为IPv4载荷；UDP四字段各2字节，首部8字节；Length含UDP首部及数据、不含IPv4首部；未分片IPv4总长度=实际IPv4首部字节数+UDP Length。第4题仅按UDP Length范围，标准计算为65535-8=65527；65507是再扣20字节IPv4首部的另一限制口径，若已说明该前提不扣，不把两种口径无条件等同。端口最大值2^16-1=65535；IPv4 Protocol为UDP/17/0x11。伪首部用于校验包含源/目的IPv4地址、零、协议号、UDP长度，不是另一个随UDP发送的首部；不要求手算整个校验和。",
+        "UDP-Q7教师明确的评分门槛：就配对依据这一子问，写出端口匹配、端口对应或源/目的端口互换即视为通过，即使只简写为端口匹配也不扣。不要求再列DNS事务ID、查询名称、应用层标识、IP反向或时间关联等更细证明；不能因缺这些细节扣udp_answer_issue、无证据联系或其他分项。这是宽松评分口径，不是宣称只凭端口即可严格证明任意报文唯一配对。IP/端口的实际取值仍按第7题其余内容核对，部分说明简略不按整题未答。",
+        "接受DNS、NTP、DHCP或其他确有本机双向IPv4 UDP报文的方法，不强制应用、固定端口或固定报文数。DNS事务ID是DNS首部字段而非UDP字段，其他UDP应用不一定有该标识，mDNS也不按普通单播DNS事务ID方式配对；这些均只作背景，不新增必答点。若选用了分片/IPv6，先核其他位置是否已有合适IPv4未分片示例，不逐字段重复扣。校验和offload/unverified提示不直接证明报文错误或实验失败。",
+        "UDP-Q9：同一抓包点的响应接收时刻减请求发送时刻，以本人选定请求响应和时间显示为准，秒/毫秒正确换算及合理舍入均可。能说明其中有往返网络传输和服务端处理等主要开销即可，不要求逐项列全、定量分解、计算平均值或把该时间解释为纯单向传播时延。UDP-Q10：请求和响应分别用UDP Length-8得到数据长度并比较；可能相同也可能不同，不强制响应更长。图中数字可读或简短算式足够，不要求重复抄写。",
+        "第5节实际问题处理仍为条件项，未明确遇到故障不要求写处理过程。有实际问题时，全文整块缺处理与验证统一归第5项problem_resolution_missing，不再以同一事实扣udp_answer_issue；不能沿用旧版第10题另扣假设原因缺失。",
+        "任务1实验及十题整体未提供扣8分替代本项全部细项；整组无必要文字分析扣4分替代一般问题；有分析但整组完全无UDP实验图扣3分。整体/无图须原页核验；理论题不要求独立配图，部分缺图不按全无图处理。无分析或无图已扣的同一事实不再扣无依据联系。帧号/端点可在图中可读，不要求每题重复截图；图编排只归第5项。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "udp_task_absent", "points": 8, "max_occurrences": 1,
+          "description": "[RPT-1] 任务1 UDP实验及第1—10题分析整体未提供；替代本项全部细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["udp_captures_absent", "udp_answers_absent", "udp_answer_issue"]
+        },
+        {
+          "id": "udp_captures_absent", "points": 3, "max_occurrences": 1,
+          "description": "[RPT-1] 有文字分析，但任务1整组完全无相关UDP实验图；部分缺图不适用",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "udp_answers_absent", "points": 4, "max_occurrences": 1,
+          "description": "[RPT-1] 第1—10题整组无必要文字回答/分析，包括只有图无解释；替代一般问题",
+          "exclusive_with": ["udp_answer_issue"]
+        },
+        {
+          "id": "udp_answer_issue", "points": 2, "max_occurrences": 1,
+          "description": "[RPT-1] 某题完全未答、核心直接矛盾、整组无本人报文依据或理论/计算整组无原理推导验证；一般问题合并一次。第7题配对依据说端口匹配即通过，不因未给DNS事务ID等细节扣分",
+          "requirement_ids": ["UDP-Q1", "UDP-Q2", "UDP-Q3", "UDP-Q4", "UDP-Q5", "UDP-Q6", "UDP-Q7", "UDP-Q8", "UDP-Q9", "UDP-Q10", "UDP-evidence-link", "UDP-reasoning"]
+        }
+      ]
+    },
+    {
+      "criterion": "TCP上传与连接建立（任务2，第11—14题）",
+      "max_score": 20,
+      "grading_notes": [
+        "RPT-1引用TCP-Q11实际上传连接的客户端/服务器IP端口与发起方；TCP-Q12三次握手Seq number/Ack number/SYN标志/ACK标志；TCP-Q13双方MSS；TCP-Q14双方Window及Window Scale是否出现、取值。确认号Ack number与ACK标志是不同字段；旧写法Seq/Ack/SYN/ACK只要含义清楚仍接受，不因缩写形式扣分。必要依据为实际上传结果、握手列表和相关字段，不要求每个字段单独一图。",
+        "任务2—4应对应实际上传文件的同一条TCP连接。流编号、四元组、连续序号或可读上下文能定位即可，不强求每题写tcp.stream==N。确证混用了不同连接或完全未建立与实际上传的联系，同一事实统一归handshake_answer_issue的TCP-stream-link一次2分；后两项不能据此再扣。网站地址、客户端端口、IP、流编号不设固定答案；已说明的等价真实文件上传实验可按其实质证据作答，不因服务器域名或界面样式不同单独扣分。",
+        "实际报文值为准；相对或绝对Seq/Ack均可，前后一致并能解释即可。接受各端MSS、窗口大小、选项组合与教材不同，不能强制MSS=1460、双方MSS相等、Window Scale必然存在或raw Window与计算后窗口数值相等。关键结论正确不因字段略少或小数/单位格式不同扣分。",
+        "TCP-Q14判断参考：Window Scale选项共3字节（Kind/Length/shift count各1字节），倍数2^7=128时编码保存指数7，Wireshark可能同时显示7与128；指数或倍数与本人报文一致即可，不因显示口径或未专门写明表示法直接扣分。SYN/SYN-ACK自身Window值不乘缩放倍数。不要求额外回答选项长度、三个编码字节或计算缩放后窗口；这些不是新版必答题新增要求。TCP-Q12的首次SYN若ACK标志为0，确认号写0、无效或不适用均可，不强制有有效确认意义。",
+        "整组任务及分析未提供扣5分替代细项；整组无必要分析扣4分替代一般问题；有分析但整组完全无相关上传/握手图扣3分。一般问题只包括某题明确全未答、核心直接矛盾、整组无本人上传/握手依据或明确错流，合并handshake_answer_issue一次2分。仅缺上传完成界面图而已有实际上传数据与正确连接依据，不按完全无图或独立缺图扣分。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "handshake_task_absent", "points": 5, "max_occurrences": 1,
+          "description": "[RPT-1] 任务2上传验证、连接建立及第11—14题分析整体未提供；替代本项全部细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["handshake_captures_absent", "handshake_answers_absent", "handshake_answer_issue"]
+        },
+        {
+          "id": "handshake_captures_absent", "points": 3, "max_occurrences": 1,
+          "description": "[RPT-1] 有文字分析，但任务2整组完全无相关上传或握手图；部分缺图不适用",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "handshake_answers_absent", "points": 4, "max_occurrences": 1,
+          "description": "[RPT-1] 第11—14题整组无必要文字回答/分析，包括只有图无解释；替代一般问题",
+          "exclusive_with": ["handshake_answer_issue"]
+        },
+        {
+          "id": "handshake_answer_issue", "points": 2, "max_occurrences": 1,
+          "description": "[RPT-1] 某题完全未答、核心直接矛盾、整组无上传握手依据或跨任务明确混用连接；一般问题合并一次",
+          "requirement_ids": ["TCP-Q11", "TCP-Q12", "TCP-Q13", "TCP-Q14", "TCP-handshake-evidence", "TCP-stream-link"]
+        }
+      ]
+    },
+    {
+      "criterion": "TCP数据传输与确认（任务3，第15—19题）",
+      "max_score": 25,
+      "grading_notes": [
+        "RPT-1引用TCP-Q15追踪流中的请求方法/上传文件名/部分内容；TCP-Q16一个握手报文与一个上传数据段的首部长度和选项比较；TCP-Q17三个上传数据段的Seq/TCP Len及变化；TCP-Q18一组数据与ACK的确认关系；TCP-Q19上述ACK对应的Wireshark RTT。按五题的核心回答核对，不把每行数值、选项名称或截图拆成扣分点。",
+        "上传数据段必须是含有效载荷的客户端上传报文，不能把纯ACK当作上传数据；但不要求固定每段长度、固定首部长度或固定HTTP分段方式。本机分段/接收卸载可能呈现大于MSS的聚合报文，不仅凭此判错。Seq通常按有效载荷字节数推进，需考虑重传和SYN/FIN等实际情况；TCP确认是累计的，不强制每段对应唯一ACK。MSS不是TCP首部长度或每段必定达到的数据长度。",
+        "RTT依本人选定数据与ACK及tcp.analysis.ack_rtt，以秒或毫秒正确换算均可。接受同一组报文的清楚时间差佐证，不要求手算平均RTT、平滑RTT或RTO；不能把另一条流或另一个无关ACK的时间当作所选RTT。没有该分析字段时可说明原因并补选关联清楚的一组，不以工具版本显示差异本身扣分；完全没有数据ACK配对/RTT实质回答仍依一般问题处理。",
+        "任务2错流事实已归handshake_answer_issue时，不在本项换名重复扣。先核全文其他位置/图中字段再认定未答；简短正确解释、少量字段未抄或图中已可读不扣。理论/计算整组均无原理、关系说明、推导或验证才并入一般问题，单题步骤简略不扣。",
+        "整组任务及分析未提供扣8分替代细项；整组无必要文字分析扣4分替代一般问题；有分析但整组完全无上传数据/确认相关图扣3分。某题完全未答、核心直接矛盾、整组无可定位本人数据确认依据或整组无关系推导说明，合并transfer_answer_issue一次2分；部分缺图不按全无图处理。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "transfer_task_absent", "points": 8, "max_occurrences": 1,
+          "description": "[RPT-1] 任务3上传数据确认及第15—19题分析整体未提供；替代本项全部细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["transfer_captures_absent", "transfer_answers_absent", "transfer_answer_issue"]
+        },
+        {
+          "id": "transfer_captures_absent", "points": 3, "max_occurrences": 1,
+          "description": "[RPT-1] 有文字分析，但任务3整组完全无上传数据或确认相关图；部分缺图不适用",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "transfer_answers_absent", "points": 4, "max_occurrences": 1,
+          "description": "[RPT-1] 第15—19题整组无必要文字回答/分析，包括只有图无解释；替代一般问题",
+          "exclusive_with": ["transfer_answer_issue"]
+        },
+        {
+          "id": "transfer_answer_issue", "points": 2, "max_occurrences": 1,
+          "description": "[RPT-1] 某题完全未答、核心直接矛盾、整组无数据确认依据或整组无原理推导验证；一般问题合并一次",
+          "requirement_ids": ["TCP-Q15", "TCP-Q16", "TCP-Q17", "TCP-Q18", "TCP-Q19", "TCP-transfer-evidence", "TCP-transfer-reasoning"]
+        }
+      ]
+    },
+    {
+      "criterion": "TCP连接释放（任务4，第20题）",
+      "max_score": 15,
+      "grading_notes": [
+        "RPT-1引用TCP-Q20：同一上传连接哪方先关闭，按时间顺序的方向/FIN/ACK/Seq/Ack，以及确认与关闭是否合并。以本人完整释放列表和必要详情为准，不要求把图中已清楚的全部字段再抄一遍。",
+        "正常关闭可合并发送ACK与FIN，不机械要求四个包或固定由客户端先关闭；重传/同时关闭等可使报文数量变化，有本人依据和合理说明即可。FIN占用一个序号；不能仅因TCP Len=0断言FIN不消耗序号。RST属于中止，不等同正常FIN释放。",
+        "已有实际RST/缺少FIN的证据及分析但未提供本任务要求的正常释放过程，不按整体任务未做处理，只并入release_answer_issue的TCP-normal-close一次2分；不是看到RST就扣分，若同一报告其他位置已提供符合要求的正常释放，便不适用。不要把同一个缺正常释放事实再记为无图/无证据/无处理。",
+        "任务4完全无实验内容及分析扣5分替代细项；已有相关实验图但无必要文字回答扣4分替代一般问题；有分析但全无相关释放图扣3分。第20题有基本正确的核心分析时，个别字段或合并说明略简不扣；核心直接矛盾、无可定位本人释放依据或确证未提供正常释放合并一般问题2分。错流事实统一归第2项，不在此重复扣。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "release_task_absent", "points": 5, "max_occurrences": 1,
+          "description": "[RPT-1] 任务4连接释放及第20题实验内容和分析整体未提供；替代本项全部细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["release_captures_absent", "release_answers_absent", "release_answer_issue"]
+        },
+        {
+          "id": "release_captures_absent", "points": 3, "max_occurrences": 1,
+          "description": "[RPT-1] 有文字分析，但完全没有相关连接释放图；已有RST图不属于全无图",
+          "requires_visual_evidence": true
+        },
+        {
+          "id": "release_answers_absent", "points": 4, "max_occurrences": 1,
+          "description": "[RPT-1] 有相关实验内容，但第20题无必要文字回答/分析，包括只有图无解释；替代一般问题",
+          "exclusive_with": ["release_answer_issue"]
+        },
+        {
+          "id": "release_answer_issue", "points": 2, "max_occurrences": 1,
+          "description": "[RPT-1] 释放核心判断直接矛盾、无可定位本人依据或明确未提供要求的正常释放；一般问题合并一次",
+          "requirement_ids": ["TCP-Q20", "TCP-release-evidence", "TCP-normal-close"]
+        }
+      ]
+    },
+    {
+      "criterion": "报告编排与实际问题处理",
+      "max_score": 10,
+      "grading_notes": [
+        "第5节未要求单列实验环境版本、资料来源、资料帮助、反思小结或额外理论综述，不套用实验1/2的environment_record_missing、source_and_help_missing、reflection_answers_missing等。第2节仅用于理解真实实验环境，不新增版本/接口名称记录扣分；报文端点与字段依据仍按相应必答题核对。",
+        "RPT-2的图号/图名/正文引用与RPT-5对应文字描述，按原页确认的不同问题图计数：每图2分，最多6分，同图多个缺陷或多题引用只计一张。图1、图1-1等逻辑清楚、顺序可对应的编号可接受，不因小幅编号跳号、标题措辞或像素距离另扣。缺陷须明确，不能从OCR序列猜布局。",
+        "figures记录最早三张不同问题图，id为p.N#imageK，N原PDF页码，K该页实际实验图自上而下/同高从左到右的序号，不计页眉图标；每图列FIG-numbering/FIG-caption/FIG-reference/FIG-description及具体原因，顶层requirements取并集。全无图不扣不存在图的编号；整组无分析已扣，不再把同一缺文字扣FIG-description，独立图号/图名/引用缺失仍可核对。",
+        "RPT-3仅在全文明确提及本次实际问题、却全文完全未交代处理方法和验证结果时，用problem_resolution_missing一次2分；不要求专门栏目，不把假设现象当作发生过的故障，不因只缺少一部分细节而扣。新版UDP-Q10是长度比较，不与问题处理混淆。其他位置已有实质处理或验证说明即不按整块缺失处理。若同一缺失已归某任务整体未做或一般问题，不重复；独立未答题仍要核对。",
+        "先分别检查四组题、图编排与条件性问题处理，再去重。在现有分项说明i简述题目/证据核对与页码，合格内容可合并简写；不扣的重复事实说明归属。真实帧号/端点在图中可读即接受，不要求每题重复写；同一张图只因图号引用缺失，不能再换名扣报文定位。",
+        "RPT-5的BODY-first-line-indent仅当全报告其他扣分为空时检查：原页确认普通中文多行叙述首行与后续行左缘对齐、无首行缩进，扣3分一次且为全报告唯一扣分。不检查标题、题干、列表、代码、表格、图注或截图内部文字；单行/不清楚不扣，不苛求精确两个汉字。已有其他扣分则不激活。",
+        "RPT-4文件命名由教师单列核验，不从PDF内容自动扣分；指导书只要求交报告，不要求pkt/pcapng附件。没有明确缺陷允许100分，不封顶98、不强制扣分；92—98超过80%只作观察，均分90下限由程序透明统一偏移实现。此审阅稿须教师确认后使用，尚无真实实验3报告稳定性或分布验证；教师批准前不回写源PDF。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "problem_resolution_missing", "points": 2, "max_occurrences": 1,
+          "description": "[RPT-3] 明确记录本次实际问题，但全文完全未交代处理方法和验证结果；假设原因或无故障不触发，同一事实不重复扣",
+          "requirement_ids": ["PROBLEM-handling", "PROBLEM-verification"]
+        },
+        {
+          "id": "screenshot_documentation_issue", "points": 2, "max_occurrences": 3,
+          "description": "[RPT-2] 已提交实验图明确缺图号、图下图名、正文引用或必要对应描述；按教师RPT-5每图2分封顶6分",
+          "requires_visual_evidence": true,
+          "requirement_ids": ["FIG-numbering", "FIG-caption", "FIG-reference", "FIG-description"],
+          "count_by": "figure"
+        },
+        {
+          "id": "body_first_line_indent_missing", "points": 3, "max_occurrences": 1,
+          "description": "[RPT-5] 仅全报告无其他扣分时，原页确认普通中文多行正文首行无缩进；全报告唯一扣分",
+          "requires_visual_evidence": true,
+          "only_if_no_other_deductions": true,
+          "requirement_ids": ["BODY-first-line-indent"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>实验3：UDP协议分析与TCP连接管理</title><style>
+:root{
+  --blue:#1f5fae;
+  --blue-dark:#17467f;
+  --blue-light:#eef5fc;
+  --blue-soft:#f7fbff;
+  --text:#1f2937;
+  --muted:#667085;
+  --line:#dbe6f1;
+  --bg:#f5f8fc;
+  --white:#ffffff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.75;
+}
+.wrapper{
+  width:min(1080px,calc(100% - 36px));
+  margin:0 auto;
+  padding:28px 0 60px;
+}
+.hero{
+  background:linear-gradient(135deg,var(--blue-dark),var(--blue));
+  color:#fff;
+  border-radius:18px;
+  padding:38px 42px;
+  box-shadow:0 16px 40px rgba(31,95,174,.14);
+}
+.hero .tag{
+  font-size:13px;
+  letter-spacing:.08em;
+  opacity:.82;
+  margin-bottom:8px;
+}
+.hero h1{
+  margin:0 0 12px;
+  font-size:40px;
+  line-height:1.25;
+}
+.hero p{
+  margin:0;
+  max-width:860px;
+  color:rgba(255,255,255,.92);
+  font-size:16px;
+}
+.section{
+  margin-top:24px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:26px 28px;
+}
+.section h2{
+  margin:0 0 16px;
+  font-size:24px;
+  color:var(--blue-dark);
+  padding-bottom:10px;
+  border-bottom:2px solid var(--blue-light);
+}
+.section h3{
+  margin:22px 0 10px;
+  font-size:19px;
+  color:var(--blue);
+}
+p{margin:8px 0}
+ul,ol{margin:8px 0 8px 1.2em}
+li{margin:5px 0}
+.meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+.meta .box{
+  background:var(--blue-soft);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px 18px;
+}
+.meta .box strong{
+  display:block;
+  color:var(--blue-dark);
+  margin-bottom:4px;
+}
+.flow{
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr;
+  gap:10px;
+  align-items:center;
+  margin-top:18px;
+}
+.step{
+  background:var(--blue-soft);
+  border:1px solid #cfe0f1;
+  border-radius:12px;
+  padding:16px 12px;
+  text-align:center;
+  min-height:112px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.step b{
+  display:block;
+  color:var(--blue);
+  margin-bottom:6px;
+}
+.arrow{
+  text-align:center;
+  color:#8da9c4;
+  font-size:26px;
+}
+.task{
+  margin-top:22px;
+  border:1px solid var(--line);
+  border-left:4px solid var(--blue);
+  border-radius:12px;
+  padding:20px 22px;
+  background:#fff;
+}
+.task h3{
+  margin:0 0 12px;
+  color:var(--blue-dark);
+}
+.label{
+  font-size:13px;
+  font-weight:700;
+  color:var(--blue);
+  margin-top:12px;
+}
+.verify{
+  background:var(--blue-soft);
+  border:1px solid #d6e5f4;
+  border-radius:10px;
+  padding:12px 14px;
+  margin-top:10px;
+}
+.questions{
+  background:#f4f8fd;
+  border:1px solid #d7e5f3;
+  border-radius:10px;
+  padding:14px 16px;
+  margin-top:12px;
+}
+.url{
+  display:block;
+  background:#0f2740;
+  color:#eef6ff;
+  padding:12px 14px;
+  border-radius:8px;
+  font-family:Consolas,Monaco,monospace;
+  overflow-wrap:anywhere;
+  margin:10px 0 12px;
+  text-decoration:underline;
+}
+.url:hover{color:#fff}
+.note{
+  margin-top:16px;
+  padding:12px 14px;
+  border-radius:9px;
+  background:#f8fbff;
+  border:1px dashed #b9d1e8;
+  color:#46586a;
+}
+.report-list{
+  margin:12px 0 0;
+  padding-left:1.7em;
+}
+.report-list li{
+  padding-left:4px;
+  margin:10px 0;
+}
+.report-list strong{color:var(--blue-dark)}
+.key-rule{color:#a32121;font-weight:700}
+.footer{
+  text-align:center;
+  color:#7a8795;
+  font-size:13px;
+  margin-top:24px;
+}
+code{
+  background:#f1f5f9;
+  border:1px solid #e2e8f0;
+  border-radius:5px;
+  padding:1px 5px;
+  font-family:Consolas,Monaco,monospace;
+}
+@media(max-width:860px){
+  .hero h1{font-size:30px}
+  .meta{grid-template-columns:1fr}
+  .flow{display:block}
+  .step{min-height:auto;margin:10px 0}
+  .arrow{transform:rotate(90deg);height:28px}
+}
+
+
+.hero h1{font-size:32px}.hero{padding:30px 34px}.section{padding:22px 26px}body{font-size:15px;line-height:1.75}
+.task{padding:18px 20px;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #dbe6f1;padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef5fc;color:#17467f}tbody tr:nth-child(even){background:#fbfdff}figure{margin:16px 0}figure img{display:block;width:100%;height:auto;border:1px solid #dbe6f1;border-radius:10px}figcaption{font-size:13px;color:#667085;text-align:center;margin-top:8px}.badge{display:inline-block;background:#eef5fc;color:#17467f;border:1px solid #cfe0f1;border-radius:5px;padding:1px 7px;font-size:12px;margin-right:8px}.questions li{margin:10px 0}.lead{font-weight:700;color:#17467f}.compact li{margin:4px 0}.references{font-size:13px;color:#667085;overflow-wrap:anywhere}a{color:#1f5fae}code{overflow-wrap:anywhere}.flow{grid-template-columns:repeat(4,1fr)}.step{min-height:90px}.note strong{color:#17467f}.print-note{font-size:13px;color:#667085}@media(max-width:620px){.wrapper{width:calc(100% - 20px);padding-top:12px}.hero{padding:24px 20px}.hero h1{font-size:25px}.section{padding:18px 16px}.task{padding:16px 14px}.section h2{font-size:21px}th,td{padding:8px}table{min-width:650px}}
+
+.flow{grid-template-columns:repeat(3,1fr)}.questions h3{margin-top:20px}.section h3{color:#17467f}.scope{border-left:4px solid #1f5fae}.small{font-size:13px;color:#667085}@media(max-width:620px){.flow{grid-template-columns:1fr}.step{min-height:0}}
+
+/* Retain the document's blue headings and title banner in printed/PDF output. */
+@media print {
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body { background: #fff; }
+  .wrapper { width: 100%; padding: 0; }
+  .hero, .section { box-shadow: none; }
+  .hero {
+    background-color: #17467f !important;
+    background-image: linear-gradient(135deg, #17467f, #1f5fae) !important;
+    color: #fff !important;
+    padding: 15px;
+  }
+  .hero h1 { color: #fff !important; font-size: 32px; }
+  .hero p, .hero .tag { color: #fff !important; }
+  .section h2, .section h3 { color: #17467f !important; }
+  .section h2 { border-bottom-color: #dbe6f1 !important; }
+  .label, .step b { color: #1f5fae !important; }
+  th { color: #17467f !important; background: #eef5fc !important; }
+  .section, .task { break-inside: auto; }
+  .section h2, .label, figcaption { break-after: avoid; }
+  .verify, .note, figure, tr { break-inside: avoid; }
+  .table-wrap { overflow: visible; }
+  table { min-width: 0 !important; font-size: 11px; }
+  th, td { padding: 6px; }
+  .section { margin-top: 14px; }
+  a { color: #17467f; text-decoration: none; }
+}
+
+.flow{grid-template-columns:repeat(2,1fr)}@media(max-width:620px){.flow{grid-template-columns:1fr}}
+
+.task > ol{margin:8px 0 14px;padding-left:1.7em}.task > ol > li{margin:7px 0}.task > .label{margin-top:16px}
+
+table caption{caption-side:top;text-align:center;font-weight:700;color:#17467f;padding:0 0 8px;break-after:avoid}
+
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;line-height:1.6;font-size:14px}
+pre code{padding:0;border:0;background:transparent}
+.task h4{font-size:15px;color:#1f5fae;margin:16px 0 6px}
+.questions h4{margin:0 0 6px;color:#17467f}
+.task .questions ol{padding-left:1.7em;margin-left:0}
+.section>ol{padding-left:1.7em;margin-left:0}
+.hero h1{font-size:30px}.hero .tag{letter-spacing:.04em}
+@page{size:A4;margin:15mm}
+@media print{body{font-size:11pt;line-height:1.6}.hero h1{font-size:22pt}.section{padding:14px 16px}.section h2{font-size:16pt}.task h3{font-size:13pt}.task h4,.questions h4{font-size:11pt}.task{padding:12px 14px}.questions{padding:10px 12px}p,li{orphans:2;widows:2}h2,h3,h4{break-after:avoid}pre{font-size:9pt;break-inside:avoid}.questions li{margin:8px 0}}
+</style></head><body><div class="wrapper">
+<header class="hero"><div class="tag">计算机网络课程设计 · 实验指导书</div>
+<h1>实验3：UDP协议分析与TCP连接管理</h1>
+<p>通过真实网络抓包，分析UDP数据报、TCP连接建立、数据传输与连接释放过程。</p></header>
+
+<section class="section"><h2>1. 实验目标</h2><ol><li>捕获并分析UDP数据报，识别首部结构、长度与端口，理解校验和与伪首部的作用。</li><li>识别TCP连接建立与释放过程，分析序号、确认号和控制标志的变化。</li><li>通过文件上传，观察MSS、接收窗口、数据长度、确认关系及RTT。</li></ol></section>
+<section class="section"><h2>2. 实验环境</h2>
+<div class="table-wrap"><table><caption>表1 实验环境与工具</caption>
+<thead><tr><th>部分</th><th>环境与工具</th></tr></thead><tbody>
+<tr><td>A：UDP协议分析</td><td>真实操作系统（Windows 11或其他操作系统）；Wireshark；能够产生UDP请求与响应的应用或命令。</td></tr>
+<tr><td>B：TCP文件上传与连接过程分析</td><td>真实操作系统；Wireshark；Web浏览器。</td></tr>
+</tbody></table></div>
+<p>全部任务在真实操作系统中完成，使用Wireshark采集实际网络接口上的报文。</p>
+</section>
+<section class="section"><h2>3. A部分：UDP协议分析</h2><article class="task"><h3>任务1：捕获并分析UDP数据报</h3><h4>任务要求</h4><ol><li>自主选择能够产生UDP请求与响应的应用或命令，捕获本机参与的双向通信。本任务选用IPv4承载的UDP报文。</li><li>选取一个UDP数据报分析首部与原始字节，再选取同一次请求及对应响应比较通信端点。</li></ol><h4>测试要求</h4><ol><li>启动Wireshark抓包，运行所选应用或命令，获得本机发送的UDP请求及对应响应。使用<code>udp and ip.addr == 本机IPv4地址</code>筛选，填入本机实际IPv4地址。</li><li>选取一个未发生IP分片的UDP请求，展开UDP首部，在分组字节窗格中查看各字段对应的字节范围及十六进制编码。</li><li>查看该数据报的UDP长度、数据部分，以及外层IPv4首部的总长度、首部长度和Protocol字段。</li><li>定位对应响应，核对配对关系，比较请求与响应的收发时间、UDP Length及数据部分长度。</li></ol><div class="questions"><h4>思考问题（报告必答）</h4><ol start="1"><li>UDP首部包含哪些字段？列出各字段的名称、字节数及对应的十六进制编码，并确定首部总长度。</li><li>Length字段表示哪一部分的长度？用所选报文中的实际字节数验证。</li><li>所选未分片报文的IPv4总长度、IPv4首部长度和UDP Length分别是多少？三者有何关系？</li><li>仅按UDP Length字段的取值范围和UDP首部长度计算，UDP数据部分最多可包含多少字节？</li><li>UDP源端口字段能够表示的最大端口号是多少？说明依据。</li><li>在Wireshark中读取外层IPv4首部的Protocol字段，其显示的协议名称和协议号是什么？指出对应的原始字节。</li><li>所选请求与响应的IP地址、端口分别是什么？端口号有何对应关系？说明配对依据。</li><li>计算UDP校验和为何需要伪首部？它包含哪些信息，是否作为UDP首部的一部分传输？</li><li>所选UDP请求与对应响应的时间间隔是多少？这个时间间隔包含哪些开销？</li><li>所选请求与响应的UDP Length分别是多少？两者的数据部分长度是否相同？</li></ol></div></article></section>
+<section class="section"><h2>4. B部分：TCP文件上传与连接过程分析</h2>
+<p>在任务2中完成一次文件上传并采集完整连接过程，随后使用该次抓包完成任务2—4的分析。三项任务均分析实际上传文件的同一条TCP连接。</p>
+<p><strong>实验文件：</strong><a href="http://gaia.cs.umass.edu/wireshark-labs/alice.txt">alice.txt</a></p>
+<p><strong>上传页面：</strong></p>
+<a class="url" href="http://gaia.cs.umass.edu/wireshark-labs/TCP-wireshark-file1.html">http://gaia.cs.umass.edu/wireshark-labs/TCP-wireshark-file1.html</a>
+<p>应完整捕获握手、上传数据与正常释放过程；缺少任一部分时重新建立连接并补测。分析时以该连接的流编号筛选，序号显示方式前后一致。</p><article class="task"><h3>任务2：文件上传与TCP连接建立</h3><h4>任务要求</h4><ol><li>完成<code>alice.txt</code>上传，采集实际上传连接从建立到正常释放的完整过程。</li><li>识别该连接的两端及三次握手，查看握手中的MSS与窗口参数。</li></ol><h4>测试要求</h4><ol><li>先下载实验文件，再启动Wireshark抓包，打开上传页面，选择<code>alice.txt</code>并上传。</li><li>保留上传完成页面截图，定位实际上传请求对应的TCP连接。使用<code>tcp.stream == N</code>筛选，其中<code>N</code>为该连接的实际流编号。</li><li>读取服务器响应后继续抓包；若该连接仍未关闭，通过浏览器菜单正常退出，待连接正常释放后停止抓包。</li><li>在已捕获的报文中定位三次握手，查看两端IP地址、端口、Seq number、Ack number、SYN标志、ACK标志，以及双方的MSS、Window和Window Scale。</li></ol><p><strong>作答截图：</strong>上传完成页面；三次握手报文列表及双方的MSS、Window、Window Scale字段。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="11"><li>本次上传连接的客户端和服务器IP地址、端口分别是什么？哪一方发起连接？</li><li>找出三次握手报文，列出各报文的Seq number、Ack number、SYN标志和ACK标志。</li><li>客户端与服务器分别通告了多大的MSS？</li><li>双方握手报文中的Window值分别是多少？是否出现Window Scale选项，其值是什么？</li></ol></div></article><article class="task"><h3>任务3：上传数据与确认报文分析</h3><h4>任务要求</h4><ol><li>分析上传请求、数据段序号与长度、确认关系及Wireshark给出的RTT。</li></ol><h4>测试要求</h4><ol><li>在Wireshark中追踪该TCP流，查看客户端发往服务器的上传请求和文件内容。</li><li>选取连续三个客户端上传数据段，查看Seq number和TCP有效载荷长度（TCP Len）；再比较其中一个数据段与一个握手报文的TCP首部长度和选项。</li><li>从所选数据中确定一组Wireshark能够明确关联的数据与ACK，查看确认号（Ack number）和RTT分析值（<code>tcp.analysis.ack_rtt</code>），用于后续确认关系与RTT两题。</li></ol><p><strong>作答截图：</strong>追踪TCP流中的请求方法、上传文件名及部分文件内容；握手报文与上传数据段的TCP首部长度和选项；三个上传数据段的Seq number与TCP Len；同一组数据与ACK的对应关系、Ack number和RTT字段。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="15"><li>在追踪TCP流的结果中，能看到什么请求方法、上传文件名及文件内容？</li><li>选取一个握手报文和一个上传数据段，它们的TCP首部长度分别是多少？包含的TCP选项有何不同？</li><li>所选三个上传数据段的Seq number和TCP Len分别是多少？序号如何变化？</li><li>所选数据段对应的确认号（Ack number）是多少，确认了哪些数据？</li><li>上述确认报文中，Wireshark给出的RTT是多少？</li></ol></div></article><article class="task"><h3>任务4：TCP连接释放</h3><h4>任务要求</h4><ol><li>分析已采集连接的正常释放过程。</li></ol><h4>测试要求</h4><ol><li>在同一TCP流中定位双方FIN及相应ACK。</li><li>按时间顺序查看这些报文的发送方向、Seq number、Ack number及控制标志。</li></ol><p><strong>作答截图：</strong>完整释放报文列表，显示发送方向、帧号、Seq number、Ack number及FIN、ACK标志；必要时补充报文详情。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="20"><li>哪一方先发起关闭？按时间顺序列出释放报文的发送方向、FIN标志、ACK标志、Seq number和Ack number，并说明确认与关闭是否合并发送。</li></ol></div></article></section>
+<section class="section"><h2>5. 实验报告要求</h2><ol><li><strong>问题作答。</strong>按任务顺序回答全部20道思考问题，在对应答案处附必要的操作结果与截图。报文截图应能辨认连接端点、帧号及分析字段；理论分析题说明原理与依据，计算题写出推导过程。同一证据可以支持多题，不重复截图。</li><li><strong>图的编号与名称。</strong>报告中所有截图和图示均按出现顺序连续编号，在图下方标注图号与图名，如“图1 UDP首部及原始字节”。正文引用相应图号。</li><li><strong>问题处理。</strong>遇到问题时，说明实际现象、处理方法及验证结果。</li><li><strong>提交文件。</strong>提交实验报告，文件命名为“学号_姓名_实验3”。</li></ol></section></div></body></html>

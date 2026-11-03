@@ -1,0 +1,96 @@
+{
+  "rubric_id": "experiment-4-icmp-v1.0-obvious-defects",
+  "title": "实验4：ICMP协议分析（定稿v1.0）",
+  "source_requirements": {
+    "file": "实验4_ICMP协议分析_实验指导书.html",
+    "path": "assets/guides/experiment-4-icmp.html",
+    "sha256": "543476c459532f1e29d9ecfe52f17c4ff798a7a6435b674a4c8d8ab07776fab8",
+    "section": "5. 实验报告要求；引用任务1—3的17道思考问题及必要结果与截图"
+  },
+  "report_requirements": {
+    "RPT-1": "问题作答：回答17题，附必要命令输出与抓包截图；可辨认帧号、端点和分析字段；计算写数据与过程、理论说明原理；同一证据可支持多题。",
+    "RPT-2": "图的编号与名称：截图和图示依次编号，图下标图号与图名，正文引用图号。",
+    "RPT-3": "结果与问题：按实际捕获结果作答；未出现预期现象时说明现象、检查、处理与验证。完成适用补测、检查或更换目标仍无预期报文，可说明无法观测字段及基本原理，不编造数值。",
+    "RPT-4": "提交文件：学号_姓名_实验4；命名单列教师核验，不自动扣本PDF分；未要求抓包附件。",
+    "RPT-5": "沿用本课程教师补充：图有必要对应文字描述；每张问题图扣2分，最多6分；仅全报告无其他扣分时，普通中文多行正文首行明确无缩进扣3分。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {"lower": 92, "upper": 98, "minimum_fraction": 0.8},
+  "items": [
+    {
+      "criterion": "Ping回显报文分析（任务1，第1—5题）",
+      "max_score": 25,
+      "grading_notes": [
+        "先逐题核对PING-Q1请求/应答Type与Code；Q2数据长度、内容及比较；Q3一组请求应答时间差与Ping输出比较；Q4两种校验和范围；Q5Identifier/Sequence用途和对应。答案可在正文、表格或可读截图中，解释题仍需基本说明。只检查核心，不逐字段、子问或错误计数。",
+        "回显请求Type=8、Code=0，应答Type=0、Code=0；Data不含8字节ICMP回显首部，回显数据应返回；IPv4校验和只覆盖IPv4首部，ICMP校验和覆盖ICMP首部及数据。Identifier和Sequence用于请求应答对应，不要求固定初值、递增算法、字符内容或每个字段均重新抄写。明确把其他层长度当成Data、把两种校验范围混同或请求应答类型颠倒才属于核心错误。",
+        "RTT用同一抓包点配对的应答时间减请求时间，秒/毫秒换算、合理舍入或与Ping显示的微小差异均接受。选了另一组有效请求应答而非首次成功组、部分数据未抄全或解释简短不扣。完全无时间计算/结果，或明确单位错误、无关报文配对导致错误结果才并入一般问题。校验和offload/unverified/疑似错误不直接证明学生实验失败。",
+        "一般问题只限某题完全未答、明确要求的核心内容缺失、核心结论直接违反协议或与本人证据矛盾，或整组完全无本人报文联系；合并ping_answer_issue一次2分。基本正确而子问略简、少量字段未抄、未罗列全部请求不扣。整组任务及分析均无扣8分；整组有图无必要分析扣4分；有分析但全无相关图扣3分。整体缺失替代细项，无分析替代一般问题；无图不再因同一事实扣无证据。"
+      ],
+      "deduction_rules": [
+        {"id": "ping_task_absent", "points": 8, "max_occurrences": 1, "description": "[RPT-1] 任务1实验及第1—5题分析整体未提供；替代全部细项", "requires_visual_evidence": true, "exclusive_with": ["ping_captures_absent", "ping_answers_absent", "ping_answer_issue"]},
+        {"id": "ping_captures_absent", "points": 3, "max_occurrences": 1, "description": "[RPT-1] 有分析但任务1整组完全无相关实验图；部分缺图不适用", "requires_visual_evidence": true, "exclusive_with": ["ping_answers_absent"]},
+        {"id": "ping_answers_absent", "points": 4, "max_occurrences": 1, "description": "[RPT-1] 有实验内容但第1—5题整组无必要文字分析；包括只有图无解释", "exclusive_with": ["ping_captures_absent", "ping_answer_issue"]},
+        {"id": "ping_answer_issue", "points": 2, "max_occurrences": 1, "description": "[RPT-1] 完全未答、明确核心缺失/矛盾或整组无本人依据；一般问题合并一次，简略不扣", "requirement_ids": ["PING-Q1", "PING-Q2", "PING-Q3", "PING-Q4", "PING-Q5", "PING-evidence"]}
+      ]
+    },
+    {
+      "criterion": "分片与TTL测试（任务2，第6—9题）",
+      "max_score": 30,
+      "grading_notes": [
+        "逐题核对TTL-Q6实际分片判断、长度/偏移/MF和重组；Q7 TTL=2及适用的TTL=1实际响应/发送方/Type/Code/解释；Q8首次成功初始TTL或至30仍无响应，以及不可固定原因；Q9两类ICMP/Ping攻击的基本原理与正常测试区别。原第8题差错报文原始信息已删除，不新增独立扣分；Tracert现为第10—17题。",
+        "Q6的-l 2500为ICMP Data 2500字节，加8字节回显首部得到IPv4负载2508；无IP选项时IPv4总长2528。每片可报Total Length或片数据长度；注明或上下文可确认口径且自洽即接受。Offset原始字段以8字节计，Wireshark可能显示换算后的字节偏移，两种均可。按实际MTU/IHL/分片数，不固定1500、两片或具体偏移；明确层次混淆且算式错误才属于核心矛盾。未分片有依据即通过，不能要求虚构分片或重组；已有正确关系和简短验证不因缺个别字段再扣。",
+        "Q7允许Time Exceeded 11/0、Destination Unreachable、Echo Reply或无响应，按本人结果说明。无响应不存在可填的发送方/Type/Code，注明未收到即可；不能要求无响应者填11/0实测值。Q8为请求初始TTL，不是回包剩余TTL；路径、目标、时间或网络环境会变化，说出一种合理原因即可；不要求精确推导路由器数量。至30未到达按实际结果给分。",
+        "Q9是开放题：Ping Flood、Smurf、Ping of Death、ICMP重定向滥用、ICMP隧道及其他有合理原理的两类均可；不匹配固定名词、年代、完整攻击步骤或参考来源。两类及原理/与正常测试区别基本清楚即可，允许合并解释；只答一类是明确核心缺失，计入本组一般问题一次2分。",
+        "适用补测/检查/更换目标有实际记录仍无预期响应，不扣失败分；依赖该报文的问题注明无法观测并给基本原理即可。单纯猜测防火墙等原因且无本人实验依据不等于完成任务。异常处理全文整块缺失归第4项，不在此重复；独立未答核心仍分别检查。未固定目标但本人证据自洽，不单独扣分。",
+        "任务及分析整体未提供扣8分；有实验内容但整组无必要分析扣4分；有分析但整组完全无大报文/TTL相关图扣3分；其余明确未答、核心缺失/矛盾或整组无本人依据合并ttl_fragment_answer_issue一次2分。不因不同结果、部分缺图、少量数值或推导简略扣。"
+      ],
+      "deduction_rules": [
+        {"id": "ttl_fragment_task_absent", "points": 8, "max_occurrences": 1, "description": "[RPT-1] 任务2及第6—9题实验与分析整体未提供；替代细项", "requires_visual_evidence": true, "exclusive_with": ["ttl_fragment_captures_absent", "ttl_fragment_answers_absent", "ttl_fragment_answer_issue"]},
+        {"id": "ttl_fragment_captures_absent", "points": 3, "max_occurrences": 1, "description": "[RPT-1] 有分析但任务2整组完全无大报文或TTL测试相关图；部分缺图不适用", "requires_visual_evidence": true, "exclusive_with": ["ttl_fragment_answers_absent"]},
+        {"id": "ttl_fragment_answers_absent", "points": 4, "max_occurrences": 1, "description": "[RPT-1] 有实验内容但第6—9题整组无必要文字分析", "exclusive_with": ["ttl_fragment_captures_absent", "ttl_fragment_answer_issue"]},
+        {"id": "ttl_fragment_answer_issue", "points": 2, "max_occurrences": 1, "description": "[RPT-1] 完全未答、明确核心缺失/矛盾或整组无本人依据；一般问题合并一次，接受合理实测变体", "requirement_ids": ["TTL-Q6", "TTL-Q7", "TTL-Q8", "TTL-Q9", "TTL-evidence"]}
+      ]
+    },
+    {
+      "criterion": "Tracert路径探测（任务3，第10—17题）",
+      "max_score": 35,
+      "grading_notes": [
+        "逐题核对TRACE-Q10与Ping的Type/Code/Data比较；Q11实际初始TTL数量/探测次数/变化；Q12实际响应源和类型原因；Q13首个Time Exceeded及对应跳；Q14与请求配对依据；Q15外层/内嵌IPv4 TTL及所属报文；Q16到达判断和本人证据；Q17星号与后续可达性。没有固定IP、跳数、数据内容、探测次数或TTL答案。",
+        "本实验限定ICMP方式路径探测，正常Echo Request为8/0，目标Echo Reply为0/0，中间TTL耗尽为11/0，允许其他实际差错类型。Q10说明基本类型及实际数据相同或不同即可，不要求固定Ping/Tracert负载字节。Q11按本人抓包统计，不以收到响应数代替请求数；个别统计差一或说明简略不扣，不机械要求每TTL恰有3个完整报文。",
+        "Q12接受源IP表格、截图中可读的地址加类型归纳；有代表性的地址和实际响应类别、原因即可，不要求全文无遗漏抄出每个节点。Q13第一个捕获到的Time Exceeded不一定属于第一跳；按内嵌请求对应初始TTL与输出核对，不能固定答第一跳。",
+        "Q14给出一种能定位的配对依据即可，例如内嵌Identifier/Sequence与请求对应，或原IPv4标识、端点及上下文等足以定位的组合；不要求全部字段。时间紧邻单独不足以唯一配对，但未展开每个匹配字段且截图已有对应不扣；只有错误请求或完全无实质配对说明才计一般问题。",
+        "Q15外层IPv4属于中间设备返回的响应，内嵌IPv4属于原探测请求；数值按本人报文，内嵌TTL可因实现/引用时点呈现0或1等，不设固定值，也不根据外层剩余TTL要求反推出精确回程跳数。Q16目标Echo Reply为典型到达证据；未到达有实际输出/抓包和合理解释同样通过，不以业务网站可访问代替ICMP实测到达。",
+        "Q17星号表示该次等待时间内未收到相应响应，单凭某跳星号不能推出后续均不可达；写出此核心即通过，不要求列原因清单。限速、过滤、丢包或响应迟到等任一种合理解释即可。若实际输出无星号，仍可按原理回答。",
+        "实际检查/补测仍无Time Exceeded时，Q13—15注明不可观测的具体值并说明基本原理即可，不要求编造帧号/TTL。未出现预期现象的处理缺失统一归第4项，不连续扣多道条件题。任务及分析整体无扣10分；整组无必要分析扣4分；有分析但全无路径探测图扣3分；明确未答、核心缺失/矛盾或整组无本人依据合并tracert_answer_issue一次2分。"
+      ],
+      "deduction_rules": [
+        {"id": "tracert_task_absent", "points": 10, "max_occurrences": 1, "description": "[RPT-1] 任务3及第10—17题实验与分析整体未提供；替代细项", "requires_visual_evidence": true, "exclusive_with": ["tracert_captures_absent", "tracert_answers_absent", "tracert_answer_issue"]},
+        {"id": "tracert_captures_absent", "points": 3, "max_occurrences": 1, "description": "[RPT-1] 有分析但任务3整组完全无相关路径探测图；部分缺图不适用", "requires_visual_evidence": true, "exclusive_with": ["tracert_answers_absent"]},
+        {"id": "tracert_answers_absent", "points": 4, "max_occurrences": 1, "description": "[RPT-1] 有实验内容但第10—17题整组无必要文字分析", "exclusive_with": ["tracert_captures_absent", "tracert_answer_issue"]},
+        {"id": "tracert_answer_issue", "points": 2, "max_occurrences": 1, "description": "[RPT-1] 完全未答、明确核心缺失/矛盾或整组无本人依据；一般问题合并一次，合理简答不扣", "requirement_ids": ["TRACE-Q10", "TRACE-Q11", "TRACE-Q12", "TRACE-Q13", "TRACE-Q14", "TRACE-Q15", "TRACE-Q16", "TRACE-Q17", "TRACE-evidence"]}
+      ]
+    },
+    {
+      "criterion": "报告编排与实际问题处理",
+      "max_score": 10,
+      "grading_notes": [
+        "仅第5节及教师RPT-5补充评分；不新增环境版本/接口清单、资料来源/帮助、反思、小结、额外综述或抓包附件要求。文件命名单列教师核验。各题证据可在全文其他位置或同一截图，不要求反复截图或抄全部数值。",
+        "异常处理仅在明确出现本次实际异常或预期报文缺失时检查；全文完全无检查/补测/处理记录且无验证才扣problem_resolution_missing一次2分。已有任何实质检查或处理验证，不因部分细节简略扣；没有故障不要求虚构。与任务缺失/无本人依据同一事实不得重复扣；Q7等实际响应分析及其他独立核心问题仍检查。",
+        "图号、图下图名、正文按图号引用、必要对应描述按原PDF核验；每张不同问题图2分，最多6分，同图多缺陷一次。接受图1/图1-1等清楚编号、共享截图多题引用、小幅跳号；答案段落已引用并说明图内容即可，不要求每个子问重述。记录最早三张问题图figures，id=p.N#imageK（原页自上而下/同高从左到右，不计页眉标志），每图列缺失要素和原因，顶层requirements取并集。",
+        "整组全无图时不扣不存在图的图号；整组无分析已扣的同一缺文字不再扣FIG-description；同一图无引用不再换名扣报文定位。截图字数/OCR排序不能证明图缺失或排版问题，须原页核验。",
+        "首行缩进只在全报告其他扣分为空时启用：原页确认普通中文多行正文首行与后续行左缘对齐扣3分，为全报告唯一扣分。标题、题干、列表、代码、表格、图注、截图内文字不算；单行/不清楚不扣，不要求精确两个汉字。",
+        "先分别核对17题和证据，再去重。每个一般类别只用一条fact=rule，requirements列全部明确受影响题号，理由写具体缺陷与页码；不同题号/问题图的盲评分歧仍须裁决，不隐藏事实、不平均。未确认或证据截断只提示复核。",
+        "允许100，不封顶98、不为分布虚构/撤销扣分。92—98超过80%仅观察，均分90下限沿用透明最小统一偏移并保留原分。此版本未做真实实验4盲复评，规则验证不证明模型判断稳定；先少量实测，批准前不写回PDF。"
+      ],
+      "deduction_rules": [
+        {"id": "problem_resolution_missing", "points": 2, "max_occurrences": 1, "description": "[RPT-3] 明确有本次实际异常/预期报文缺失，但全文完全无检查、补测或处理且无验证记录；同一事实不重复扣", "requirement_ids": ["PROBLEM-handling", "PROBLEM-verification"]},
+        {"id": "screenshot_documentation_issue", "points": 2, "max_occurrences": 3, "description": "[RPT-2] 依教师RPT-5每张图明确缺图号、图下图名、正文图号引用或必要对应描述扣2分，最多6分", "requires_visual_evidence": true, "requirement_ids": ["FIG-numbering", "FIG-caption", "FIG-reference", "FIG-description"], "count_by": "figure"},
+        {"id": "body_first_line_indent_missing", "points": 3, "max_occurrences": 1, "description": "[RPT-5] 全报告无其他扣分时，原页确认普通中文多行正文首行无缩进；唯一扣分", "requires_visual_evidence": true, "only_if_no_other_deductions": true, "requirement_ids": ["BODY-first-line-indent"]}
+      ]
+    }
+  ]
+}
