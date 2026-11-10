@@ -79,10 +79,12 @@ REQUIRED_IN_ARCHIVE = (
     "assets/rubrics/experiment-2-dns.json",
     "assets/rubrics/experiment-3-udp-tcp.json",
     "assets/rubrics/experiment-4-icmp.json",
+    "assets/rubrics/experiment-5-router-configuration.json",
     "assets/guides/experiment-1-web-http.pdf",
     "assets/guides/experiment-2-dns.html",
     "assets/guides/experiment-3-udp-tcp.html",
     "assets/guides/experiment-4-icmp.html",
+    "assets/guides/experiment-5-router-configuration.html",
     "assets/review-panel-template.html",
     "config/defaults.example.json",
     "references/portability.md",
@@ -91,6 +93,7 @@ REQUIRED_IN_ARCHIVE = (
     "references/experiment-2-dns.md",
     "references/experiment-3-udp-tcp.md",
     "references/experiment-4-icmp.md",
+    "references/experiment-5-router-configuration.md",
     "agents/openai.yaml",
 )
 

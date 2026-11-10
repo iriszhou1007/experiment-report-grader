@@ -1,0 +1,87 @@
+{
+  "rubric_id": "experiment-5-router-configuration-v1.1-obvious-defects",
+  "title": "实验5：路由器配置实验（v1.1）",
+  "source_requirements": {
+    "file": "实验5_路由器配置实验_实验指导书.html",
+    "path": "assets/guides/experiment-5-router-configuration.html",
+    "sha256": "aa8ca6fa293ce1340823f33d66f0af28381d06c6706250a58dd753c9374de9f2",
+    "section": "5. 实验报告与提交要求；引用任务1—3的8道思考问题与本人拓扑、关键配置或命令输出"
+  },
+  "report_requirements": {
+    "RPT-1": "按任务顺序回答8题，引用本人拓扑、关键配置或命令输出；同一证据可供多题引用。",
+    "RPT-2": "报告中的拓扑与截图按出现顺序编号，在图下标明图号和图名，答案注明所引用图号。",
+    "RPT-3": "遇到异常时，写清实际现象、定位依据、处理方法及复测结果。",
+    "RPT-4": "仅提交实验报告，命名为学号_姓名_实验5_报告；命名单列教师核验，不从PDF自动扣分；不要求提交或保存pkt工程。",
+    "RPT-5": "沿用课程教师补充：图有必要对应文字描述，每张问题图扣2分最多6分；仅全报告无其他扣分时，普通中文多行正文首行明确无缩进扣3分。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {"lower": 92, "upper": 98, "minimum_fraction": 0.8},
+  "items": [
+    {
+      "criterion": "Console接入与命令模式（任务1，第1—2题）",
+      "max_score": 25,
+      "grading_notes": [
+        "逐题核对CONSOLE-Q1配置线用于本地串口管理、PC1以太网用于IP通信，PC0经Console不需要IP；CONSOLE-Q2四种模式的实际提示符及查看状态、修改全局和接口配置的模式。拓扑与终端会话可由同一本人图或输出证明，答案可在正文、表格或可读截图中。",
+        "提示符的设备名按本人实际配置，通常用户EXEC为>、特权EXEC为#、全局配置为(config)#、接口配置为(config-if)#；接受大小写、设备名和合理的等价缩写。查看接口状态可在特权EXEC用show，也可在配置模式使用do show；部分show命令在用户模式可用，按命令实际可执行情况和本人结果判断，不要求固定命令名称。返回用户EXEC的disable、返回上级的exit和回特权模式的end分别按实际效果接受，不照抄原图中错误的exit箭头。",
+        "只对整题完全未答、核心概念明显错误或与本人证据直接矛盾、整组完全无本人拓扑及终端依据合并扣2分；非关键子问或少量提示符缺抄、同义简答不扣。整组实验及分析整体未提供扣8分；有实验内容但整组无必要文字分析扣4分。整体缺失替代细项；无分析替代一般问题。指导书允许关键配置或命令输出作为证据，不新增本任务必须有截图的扣分。"
+      ],
+      "deduction_rules": [
+        {"id":"console_task_absent","points":8,"max_occurrences":1,"description":"[RPT-1] 任务1实验及第1—2题分析整体未提供；替代全部细项","requires_visual_evidence":true,"exclusive_with":["console_answers_absent","console_answer_issue"]},
+        {"id":"console_answers_absent","points":4,"max_occurrences":1,"description":"[RPT-1] 有实验内容但第1—2题整组无必要文字分析","exclusive_with":["console_answer_issue"]},
+        {"id":"console_answer_issue","points":2,"max_occurrences":1,"description":"[RPT-1] 某题完全未答、核心明显错误或整组无本人依据；一般问题合并一次","requirement_ids":["CONSOLE-Q1","CONSOLE-Q2","CONSOLE-evidence"]}
+      ]
+    },
+    {
+      "criterion": "接口配置与连通性（任务2，第3—4题）",
+      "max_score": 30,
+      "grading_notes": [
+        "逐题核对INTERFACE-Q3关闭与启用时的接口状态、线路协议及Ping结果，说明配置IP不保证链路可用；INTERFACE-Q4按192.168.1.1和192.168.1.2及255.255.255.0判断同属192.168.1.0/24，本机直接访问路由器自身接口，不需要路由器转发至其他网络。本人输出、表格或可读截图支持即可，同一图可供多题引用。",
+        "管理性关闭通常为administratively down/down；链路就绪后通常为up/up。down/down不等于一定由shutdown引起；结合本人实际状态和检查作答。首次Ping可因ARP解析或链路建立出现部分超时，后续测试成功且解释合理即接受，不强制全成功、固定响应时间或固定提示文字。若实际异常且有本人检查处理及复测，应按实际结果评价，不强迫编造成功结果。",
+        "PC1访问同网段路由器接口不依赖默认网关转发，但表2要求配置网关；不因为学生正确指出网关非本次同网段Ping必需而判错。配置略写、个别状态字段可在图中辨认、解释简略不扣；没有实质报告本人实验或某题完全未答、核心直接错误才归一般问题一次2分。",
+        "整组实验及分析整体未提供扣8分；有实验内容但第3—4题整组无必要文字分析扣4分。整体缺失替代细项，无分析替代一般问题；不要把同一缺失再记为无本人依据。命令输出可作证据，不新增本任务必须有截图的扣分。实际异常处理整块缺失归第4项，不重复扣。"
+      ],
+      "deduction_rules": [
+        {"id":"interface_task_absent","points":8,"max_occurrences":1,"description":"[RPT-1] 任务2实验及第3—4题分析整体未提供；替代全部细项","requires_visual_evidence":true,"exclusive_with":["interface_answers_absent","interface_answer_issue"]},
+        {"id":"interface_answers_absent","points":4,"max_occurrences":1,"description":"[RPT-1] 有实验内容但第3—4题整组无必要文字分析","exclusive_with":["interface_answer_issue"]},
+        {"id":"interface_answer_issue","points":2,"max_occurrences":1,"description":"[RPT-1] 某题完全未答、核心明显错误或整组无本人依据；一般问题合并一次","requirement_ids":["INTERFACE-Q3","INTERFACE-Q4","INTERFACE-evidence"]}
+      ]
+    },
+    {
+      "criterion": "Telnet登录与权限验证（任务3，第5—8题）",
+      "max_score": 35,
+      "grading_notes": [
+        "逐题核对TELNET-Q5 VTY允许Telnet、本地账户认证及5分钟会话空闲超时；Q6错误与正确口令的实际结果、连接建立与认证成功的区别；Q7 enable前后权限及登录口令与特权口令作用；Q8 Ping通但Telnet无法登录时提出两项合理路由器配置检查及验证。以本人配置、提示符或命令输出为依据，不强制每一步独立截图。",
+        "login local与本地用户数据库对应；允许Telnet不等于只允许Telnet，同时允许SSH不扣。超时指已建立EXEC会话无用户活动的空闲时长，不是总连接时长；配置及含义可由本人可读输出支撑，不要求真的等待5分钟。错误口令提示或重试/断开表现按本人设备，断开后重新发起连接合格；不固定失败文案或重试次数。登录提示表示连接已到达认证阶段，用户EXEC提示符表明认证成功；不要求屏幕显示密码（输入通常不回显）。",
+        "执行enable前无法进入配置、成功进入特权EXEC后可进入配置即可；允许合理简短说明或可读命令回显，不逐一要求固定截图、固定设备名、所有提示符和命令原样输出。登录口令用于本地账户认证，enable口令用于特权访问；使用password或secret等效实现并以本人行为为准。不因另配置允许SSH、等效命令或合理顺序扣分。",
+        "Q8任意两项合理检查并说明对应验证即可：VTY允许的传输协议、login local、本地用户名口令、访问控制、VTY资源与配置；若学生针对已登录后enable失败讨论特权口令，应区分阶段，不能作为唯一的连接失败原因。show running-config、show users或其他能验证相应配置的合理命令均接受；配置中的secret可显示为散列或隐藏，不要求明文截图。",
+        "整组实验及分析整体未提供扣10分；有实验内容但第5—8题整组无必要文字分析扣4分；某题完全未答、核心明确错误或整组无本人配置/登录依据合并telnet_answer_issue一次2分。命令输出可作证据，不新增本任务必须有截图的扣分；部分提示符未逐一展示、解释简略不按整题未答。整体缺失替代细项，无分析替代一般问题；同一事实不重复扣。"
+      ],
+      "deduction_rules": [
+        {"id":"telnet_task_absent","points":10,"max_occurrences":1,"description":"[RPT-1] 任务3实验及第5—8题分析整体未提供；替代全部细项","requires_visual_evidence":true,"exclusive_with":["telnet_answers_absent","telnet_answer_issue"]},
+        {"id":"telnet_answers_absent","points":4,"max_occurrences":1,"description":"[RPT-1] 有实验内容但第5—8题整组无必要文字分析","exclusive_with":["telnet_answer_issue"]},
+        {"id":"telnet_answer_issue","points":2,"max_occurrences":1,"description":"[RPT-1] 某题完全未答、核心明显错误或整组无本人依据；一般问题合并一次","requirement_ids":["TELNET-Q5","TELNET-Q6","TELNET-Q7","TELNET-Q8","TELNET-evidence"]}
+      ]
+    },
+    {
+      "criterion": "报告编排与实际问题处理",
+      "max_score": 10,
+      "grading_notes": [
+        "仅按第5节和教师RPT-5评分，不要求额外资料来源、反思、小结、版本清单或pkt工程。报告命名单列教师核验，不从PDF成绩自动扣分。已实际出现异常而全文完全没有定位、处理及复测记录时才扣problem_resolution_missing一次2分；已有实质检查、处理或复测则简略不扣，没有异常不要求虚构。与任务整体未做同一事实不重复扣。",
+        "图号、图下图名、正文按图号引用及必要对应描述须在原PDF核验。每张明确问题图扣2分、最多6分，同图多个缺陷只计一次；接受图1、图1-1、合理的图1—图3范围引用及一图支持多题，不因小幅跳号、图名措辞或距离扣分。记录最早三张问题图figures，id=p.N#imageK；每张列具体缺项和原因，顶层requirements取并集；不计页眉标志。整组无图不扣不存在图的编号；已扣整组无分析时同一缺文字不再扣图描述。",
+        "按任务顺序是指导书建议的组织方式；8题顺序调整、合并到表格或分散在正文，只要内容能明确对应就不扣。原始命令输出或操作截图可证明本人实验，但不能替代题目要求的解释；截图中本身含有清楚的文字回答则可计入。疑似照抄指导书图片或非本人证据只标记教师复核，不在证据不足时推定违规；经确认整组没有本人实验依据时只归对应任务的一般问题。",
+        "若三个任务均有实验图或输出，但第1—8题全部没有必要文字分析，应分别使用console_answers_absent、interface_answers_absent和telnet_answers_absent，各扣4分，原始总分88；不得改用三个2分的一般问题。跨分项扣分同时存在时，理由必须指向彼此独立的事实；同一缺文字或同一未做任务只保留最直接的一条。",
+        "仅全报告其他扣分为空时，原页确认普通中文多行叙述正文首行与后续行左缘对齐、无缩进才扣3分且为唯一扣分；题干、列表、代码、表格、图注、截图内文字不算，单行或不清楚不扣，不要求精确两个汉字。",
+        "每条扣分必须confirmed、fact=rule并附明确页码；先检查所有要求再去重。不确定、OCR错读和文字截断只标记复核，不猜测扣分。两遍事实或问题图不一致需教师裁决，不取平均。误交、空白或教师确认完全无效的提交不使用本细则累加扣分，且模型不得自行判0；仅在教师明确确认后记录submission_exception并保持原始分、发布分和课程偏移均为0。允许100分；92—98分超过80%仅为分布观察，不是强制配额；正常有效提交的均分90下限如适用通过透明统一偏移保留原始分。本规则未经真实实验5报告重复评分测试。"
+      ],
+      "deduction_rules": [
+        {"id":"problem_resolution_missing","points":2,"max_occurrences":1,"description":"[RPT-3] 明确出现实际异常，但全文完全无定位、处理及复测记录；同一事实不重复扣","requirement_ids":["PROBLEM-response-missing"]},
+        {"id":"screenshot_documentation_issue","points":2,"max_occurrences":3,"description":"[RPT-2/RPT-5] 每张已提交的图明确缺图号、图下图名、正文图号引用或必要描述扣2分，最多6分","requires_visual_evidence":true,"requirement_ids":["FIG-numbering","FIG-caption","FIG-reference","FIG-description"],"count_by":"figure"},
+        {"id":"body_first_line_indent_missing","points":3,"max_occurrences":1,"description":"[RPT-5] 仅全报告无其他扣分时，原页确认普通中文多行正文首行无缩进；唯一扣分","requires_visual_evidence":true,"only_if_no_other_deductions":true,"requirement_ids":["BODY-first-line-indent"]}
+      ]
+    }
+  ]
+}
