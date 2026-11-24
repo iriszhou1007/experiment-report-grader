@@ -84,6 +84,10 @@ Skill 默认采用整数分。模型不再凭整体印象选分数档，而是�
 
 “实验5：路由器配置实验”使用[指导书](assets/guides/experiment-5-router-configuration.html)、[教师版评分细则](references/experiment-5-router-configuration.md)和 `assets/rubrics/experiment-5-router-configuration.json`（规则v1.1）。分项25/30/35/10，按任务1—3的8题核对，接受等价IOS命令、本人拓扑/配置/命令输出；不要求提交`.pkt`工程，也不要求每个操作都截图。误交、空白或教师确认完全无效的报告不得由模型自行判0或累加普通扣分推导0，需教师明确确认`submission_exception`。
 
+“实验6：IPv4子网划分与编址”使用[指导书](assets/guides/experiment-6-ipv4-subnetting.html)、[教师版评分细则](references/experiment-6-ipv4-subnetting.md)和 `assets/rubrics/experiment-6-ipv4-subnetting.json`（规则v1.0，尚未用真实报告验证）。分项20/20/25/25/10，按题1—4的8道分析题和本人网络配置、Ping、接口状态与VLSM表核对；接受自洽的实际地址与等价计算，不要求提交`.pka/.pkt`工程。评分前需由教师确认这份待验证评分标准。
+
+“实验7：DHCP配置与协议分析”使用[指导书](assets/guides/experiment-7-dhcp.html)、[教师版评分细则](references/experiment-7-dhcp.md)和 `assets/rubrics/experiment-7-dhcp.json`（规则v1.0，尚未用真实报告进行盲评验证）。分项25/20/20/25/10，按B1、B2、A1、A2四项任务及9道分析题核对；DHCP报文序列、广播/单播、地址和Packet Tracer行为以学生实际证据为准，不要求提交Packet Tracer工程。评分前需教师确认这份待验证评分标准。
+
 仅文字模式仍会把 OCR 识别结果并入证据，但 OCR 不保留可靠的页面布局。默认评分表的 `hard_to_read` 档因此设有视觉扣分门槛：只有实际打开相关 PDF 页面并记录视觉核验页后才能选择。这个检查按扣分触发，不会要求逐份视觉复核整批报告。
 
 ## 3. 评分前选择报告检查模式

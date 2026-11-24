@@ -1,0 +1,194 @@
+{
+  "rubric_id": "experiment-6-ipv4-subnetting-v1.0-obvious-defects",
+  "title": "实验6：IPv4子网划分与编址（v1.0）",
+  "source_requirements": {
+    "file": "实验6_IPv4子网划分与编址_实验指导书.html",
+    "path": "assets/guides/experiment-6-ipv4-subnetting.html",
+    "sha256": "438b72bedd7257edcb40e10c733978e4e544e55595a64324a546eb5b9553bdfd",
+    "section": "1. 完成检查、2. 各题要求、3. 实验报告模板；引用题1—4的8道分析问题"
+  },
+  "report_requirements": {
+    "RPT-1": "按题1—4分别报告配置或划分结果；每题附100%完成度及全部Assessment Items评分明细截图，并提供该题提交内容要求的配置、Ping、接口状态、子网表或接口地址证据。",
+    "RPT-2": "回答8道分析问题；计算题写出必要过程或关系，结论与本人配置、Ping、接口状态和子网划分相互一致。",
+    "RPT-3": "题3、题4的子网划分表包含用途、网络地址及前缀、子网掩码、广播地址、可用地址范围、设备接口和实际配置地址。",
+    "RPT-4": "每张截图下方注明图号和图名；答案在使用图片时明确引用对应图号。",
+    "RPT-5": "仅提交一份实验报告，命名为学号_姓名_实验6；不交pka或pkt文件。命名单列教师核验，不从PDF自动扣分。",
+    "RPT-6": "沿用课程教师补充：每张实验图还须有正文图号引用及必要对应描述；每张问题图扣2分、最多6分。仅全报告无其他扣分时，普通中文多行正文首行明确无缩进扣3分。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {
+    "lower": 92,
+    "upper": 98,
+    "minimum_fraction": 0.8
+  },
+  "items": [
+    {
+      "criterion": "题1：主机地址、网关与可达性",
+      "max_score": 20,
+      "grading_notes": [
+        "核对TASK1-Q1六次Ping结果所反映的本地/远端可达性差异及目的地址与掩码解释；TASK1-Q2比较网关留空、同网段不存在地址和跨网段地址，并说明怎样用配置图区分原因及恢复后用哪次远端测试验证。允许按本人实际现象作答，不要求固定成功率或报错文字。",
+        "提交证据包括三台PC最终IPv4配置、LAXpc不同网关设置、对应完整Ping结果（含失败结果），以及本题100%完成度和全部评分明细。正文、表格或清晰截图可相互补充；同一证据可支持多问。少量Ping行未重复抄写、解释简短或措辞不同不扣。",
+        "整题实验与分析整体未提供扣6分；有实验结果但两问整组没有必要文字分析扣4分；某问完全未答、核心判断与本人证据直接矛盾，或本题要求的结果/完成检查证据有明显整块缺失，合并扣2分一次。三档互斥，不逐小问或逐张截图累计。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "task1_absent",
+          "points": 6,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] 题1实验结果及两问分析整体未提供；替代本题细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["task1_answers_absent", "task1_issue"]
+        },
+        {
+          "id": "task1_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有题1实验结果，但第1—2问整组无必要文字分析",
+          "exclusive_with": ["task1_issue"]
+        },
+        {
+          "id": "task1_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] 某问完全未答、核心明显错误，或题1必要结果/完成检查证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["TASK1-Q1", "TASK1-Q2", "TASK1-results", "TASK1-check"]
+        }
+      ]
+    },
+    {
+      "criterion": "题2：主机与路由器接口编址",
+      "max_score": 20,
+      "grading_notes": [
+        "核对TASK2-Q3任选主机与网关的子网地址计算、掩码依据、实际接口状态和Ping结论；TASK2-Q4分别利用路由器接口状态/启用信息和主机地址、掩码、子网计算或配置来区分两类故障。接受等价字段、命令与合理排查顺序。",
+        "提交证据包括三台PC IPv4配置、三台路由器Fa0/0配置及接口状态、完整网关Ping结果，以及本题100%完成度和全部评分明细。只要核心字段可辨认，不要求为每个设备重复相同解释；首次Ping受ARP等影响而部分超时不扣。",
+        "整题整体未提供扣6分；有实验结果但第3—4问整组无必要文字分析扣4分；某问完全未答、核心明显错误，或必要结果/完成检查证据整块缺失，合并扣2分一次。三档互斥；实际异常如实记录且判断自洽即可。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "task2_absent",
+          "points": 6,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] 题2实验结果及两问分析整体未提供；替代本题细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["task2_answers_absent", "task2_issue"]
+        },
+        {
+          "id": "task2_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有题2实验结果，但第3—4问整组无必要文字分析",
+          "exclusive_with": ["task2_issue"]
+        },
+        {
+          "id": "task2_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] 某问完全未答、核心明显错误，或题2必要结果/完成检查证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["TASK2-Q3", "TASK2-Q4", "TASK2-results", "TASK2-check"]
+        }
+      ]
+    },
+    {
+      "criterion": "题3：VLSM划分与接口编址",
+      "max_score": 25,
+      "grading_notes": [
+        "核对TASK3-Q5：60主机的最小子网通常为/26、62个可用地址，30主机通常为/27、30个可用地址，并说明主机位/地址块大小差异；允许用2^h-2过程或等价解释。TASK3-Q6用本人一条串口链路的两端实际地址与掩码验证同属一个/30，并排除网络地址、广播地址及其他链路地址。",
+        "提交证据包括9个子网的划分表及计算依据、12个路由器接口地址与掩码截图，以及本题100%完成度和全部评分明细。子网表按RPT-3核对七类字段；可分散在多张表或正文，字段名称可等价，不要求固定表格样式。",
+        "整题整体未提供扣8分；有划分/配置结果但第5—6问整组无必要文字分析扣4分；某问完全未答、核心计算明显错误，或必要子网表、接口配置、完成检查证据出现整块缺失，合并扣2分一次。个别算术笔误但过程和实际配置自洽不扩大扣分。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "task3_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2/RPT-3] 题3划分、接口配置及两问分析整体未提供；替代本题细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["task3_answers_absent", "task3_issue"]
+        },
+        {
+          "id": "task3_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有题3划分或配置结果，但第5—6问整组无必要文字分析",
+          "exclusive_with": ["task3_issue"]
+        },
+        {
+          "id": "task3_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2/RPT-3] 某问完全未答、核心明显错误，或题3必要子网表/配置/完成检查证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["TASK3-Q5", "TASK3-Q6", "TASK3-table", "TASK3-interfaces", "TASK3-check"]
+        }
+      ]
+    },
+    {
+      "criterion": "题4：较大地址块的VLSM编址",
+      "max_score": 25,
+      "grading_notes": [
+        "核对TASK4-Q7按本人第一个/23写网络地址、广播地址及第三字节跨越关系；/23块在第三字节按2递增并从相应偶数边界开始，具体数值以活动地址块和本人分配为准。未对齐会造成并非合法/23网络边界、范围判断错误或与相邻块重叠。",
+        "核对TASK4-Q8按本人实际划分汇总各子网地址块大小、已占用和剩余地址。250台主机至少需要/24（256个地址、254个可用），最终能否继续划分取决于剩余空间中是否存在一个对齐且连续的/24；接受计算清楚、自洽的不同实际结论。",
+        "提交证据包括9个子网表及计算依据、12个路由器接口地址与掩码、HQ Serial0/2/0时钟与启用状态，以及本题100%完成度和全部评分明细。子网表字段按RPT-3宽松核对，可合并呈现。",
+        "整题整体未提供扣8分；有划分/配置结果但第7—8问整组无必要文字分析扣4分；某问完全未答、核心计算明显错误，或必要子网表、接口/串口状态、完成检查证据整块缺失，合并扣2分一次。不要因与参考分配顺序不同而扣，只看是否满足活动需求且内部一致。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "task4_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2/RPT-3] 题4划分、接口配置及两问分析整体未提供；替代本题细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["task4_answers_absent", "task4_issue"]
+        },
+        {
+          "id": "task4_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-2] 有题4划分或配置结果，但第7—8问整组无必要文字分析",
+          "exclusive_with": ["task4_issue"]
+        },
+        {
+          "id": "task4_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2/RPT-3] 某问完全未答、核心明显错误，或题4必要子网表/配置/完成检查证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["TASK4-Q7", "TASK4-Q8", "TASK4-table", "TASK4-interfaces", "TASK4-serial", "TASK4-check"]
+        }
+      ]
+    },
+    {
+      "criterion": "报告编排",
+      "max_score": 10,
+      "grading_notes": [
+        "只按指导书第3节和教师RPT-6检查，不新增资料来源、反思、小结、软件版本或工程附件要求。报告命名由教师单列核验；只收到PDF不能推断未按要求提交，不因未交pka/pkt扣分，因为指导书明确不交。",
+        "每张实际提交的实验图均应有图号、图下图名、正文按图号明确引用及必要对应描述。四项分别检查，引用和描述不是二选一；同一句可同时完成两项。每张明确问题图扣2分，最多计最早三张、封顶6分，同图多个缺陷只计一次。记录figures.id=p.N#imageK及每图缺失要素，必须查看原页。",
+        "整题无图或整题整体未做时，不扣不存在图片的编排；已用某题answers_absent扣过整组无文字分析时，同一缺文字不再重复扣FIG-description，但独立缺图号、图名或图号引用仍可按图计。图号范围引用、一段分别引用多图、同图支持多问均接受；小幅跳号、图名措辞或图文距离不扣。",
+        "仅当全报告其他扣分为空时，原页确认普通中文多行叙述正文首行与后续行左缘对齐、无缩进才扣3分且为唯一扣分。题干、列表、计算式、代码、表格、图注和截图内部文字不算；单行或不清楚不扣，不要求精确两个汉字。",
+        "每条扣分必须confirmed、fact=rule并附页码；视觉规则须有visual_evidence。先检查四题与编排再去重；不确定、OCR错读和证据截断只标记复核。允许100分；92—98超过80%仅作分布观察，不是配额。正常有效提交的均分下限通过透明统一偏移实现；误交、空白或无效提交只能由教师确认submission_exception。本规则尚未用真实实验6报告做重复评分测试。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "screenshot_documentation_issue",
+          "points": 2,
+          "max_occurrences": 3,
+          "description": "[RPT-4/RPT-6] 每张已提交实验图明确缺图号、图下图名、正文图号引用或必要描述扣2分，最多6分",
+          "requires_visual_evidence": true,
+          "requirement_ids": ["FIG-numbering", "FIG-caption", "FIG-reference", "FIG-description"],
+          "count_by": "figure"
+        },
+        {
+          "id": "body_first_line_indent_missing",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-6] 仅全报告无其他扣分时，原页确认普通中文多行正文首行无缩进；唯一扣分",
+          "requires_visual_evidence": true,
+          "only_if_no_other_deductions": true,
+          "requirement_ids": ["BODY-first-line-indent"]
+        }
+      ]
+    }
+  ]
+}

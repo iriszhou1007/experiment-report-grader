@@ -1,0 +1,199 @@
+{
+  "rubric_id": "experiment-7-dhcp-v1.0-obvious-defects",
+  "title": "实验7：DHCP配置与协议分析（v1.0）",
+  "source_requirements": {
+    "file": "实验7_DHCP配置与协议分析_实验指导书.html",
+    "path": "assets/guides/experiment-7-dhcp.html",
+    "sha256": "6d03dacaeb6e5b76500db41f3c372f55a694a247714be6dd58b930f5c9571e8d",
+    "section": "3. B：真实DHCP报文分析、4. A：DHCP配置与仿真观察、5. 实验报告与提交；引用任务B1、B2、A1、A2的9道思考问题"
+  },
+  "report_requirements": {
+    "RPT-1": "按B1、B2、A1、A2报告本人实际操作与测试结果，并回答第1—9题；正文、表格、命令输出、事件列表和清晰截图可以相互补充，同一证据可支持多问。",
+    "RPT-2": "B1提供指定网卡的release、renew、all命令与输出、一次重新获取地址的报文列表及回答第1—3题所需字段。可用MAC、Transaction ID、时间关系等足以识别本次过程的证据。",
+    "RPT-3": "B2证明目标网卡在操作前持有有效DHCPv4租约，不先release；提供主动renew命令与输出、对应请求和响应、租期/T1/T2及第4—5题分析。实际出现完整获取流程或NAK时按真实报文说明。",
+    "RPT-4": "A1提供初始拓扑、服务器静态IPv4配置、已开启的DHCP服务、至少三个可分配地址且最大用户数不少于3的地址池、PC1和PC2自动获取结果及两组到服务器的完整Ping结果。",
+    "RPT-5": "A2先进入Simulation模式，再新增PC3并接入同一局域网。观察PC3首次通过DHCP获址，用本人截图呈现关键事件、支持分析的报文字段、最终配置和到服务器的Ping结果，并回答第8—9题。学生可自行选择筛选、推进和验证方式。",
+    "RPT-6": "每张任务截图下方注明图号和图名，答案引用所用图号；任务内容与全部思考问题按课程统一实验报告格式组织。",
+    "RPT-7": "只提交一份实验报告，命名为学号_姓名_实验7；不提交Packet Tracer工程文件。命名单列教师核验，不从PDF自动扣分；只收到PDF不能证明缺少其他提交。",
+    "RPT-8": "沿用课程教师补充：每张实验图还须有正文图号引用及必要对应描述；每张问题图扣2分、最多6分。仅全报告无其他扣分时，普通中文多行正文首行明确无缩进扣3分。"
+  },
+  "max_score": 100,
+  "minimum_published_average": 90,
+  "require_confirmed_deductions": true,
+  "require_rule_fact_ids": true,
+  "recheck_fact_consistency": true,
+  "distribution_target": {
+    "lower": 92,
+    "upper": 98,
+    "minimum_fraction": 0.8
+  },
+  "items": [
+    {
+      "criterion": "B1：重新获取地址与真实报文捕获",
+      "max_score": 25,
+      "grading_notes": [
+        "核对B1-Q1是否从本人实际抓包识别本次重新获取地址的报文，并给出网卡、MAC、Transaction ID、时间顺序或等价依据。通常可见DHCPRELEASE及DISCOVER/OFFER/REQUEST/ACK，但不得把固定四报文序列强加给实际抓包；重复请求、多个OFFER、附加ARP或不同服务器行为按实际解释。",
+        "核对B1-Q2：DHCPv4使用UDP，客户端端口68、服务器端口67；Transaction ID用于把同一事务的请求与响应对应起来并排除其他并发DHCP会话。端口方向须结合实际报文，不因字段显示名称或十六进制格式不同扣分。",
+        "核对B1-Q3：优先用本次成功的DHCPACK与本机配置对照IPv4地址、掩码、网关和DNS。OFFER可说明候选配置。若未捕获ACK，接受按实际抓包和系统输出说明已知结果及无法核对之处。参数未下发、多个DNS或显示方式不同可按实际解释。结合命令输出、报文列表与可读截图整体判断，不要求逐字段抄录。",
+        "B1实验与第1—3题分析整体未提供扣8分；有真实操作或抓包结果但三问整组无必要文字分析扣4分；某问完全未答、核心结论明显错误，或命令/报文/字段证据有明显整块缺失，合并扣2分一次。三档互斥，不按单个字段、报文或截图累计。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "b1_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] B1命令、重新获取报文及第1—3题分析整体未提供；替代本项细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["b1_answers_absent", "b1_issue"]
+        },
+        {
+          "id": "b1_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] 有B1操作或抓包结果，但第1—3题整组无必要文字分析",
+          "exclusive_with": ["b1_issue"]
+        },
+        {
+          "id": "b1_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-2] 某问完全未答、核心明显错误，或B1必要命令/报文/字段证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["B1-Q1", "B1-Q2", "B1-Q3", "B1-commands", "B1-packets", "B1-fields"]
+        }
+      ]
+    },
+    {
+      "criterion": "B2：有效租约下主动续租与差异分析",
+      "max_score": 20,
+      "grading_notes": [
+        "核对操作前目标网卡仍有有效DHCPv4租约，未先执行release，并对指定网卡执行renew。正常情况下通常观察到DHCPREQUEST与DHCPACK，但这不是唯一合格结果；若出现DHCPDISCOVER、DHCPOFFER、DHCPNAK、重试或服务器变化，只要有真实字段和网络状态解释即可。",
+        "核对B2-Q4能否结合实际报文概括重新获取与主动续租在交互、地址使用和发送方式上的主要差异。续租请求通常使用现有地址并可单播到原服务器，初次获取常从0.0.0.0和广播开始。接受足以支持结论的字段与简明解释，具体广播或单播以实际报文为准。MAC、ciaddr、yiaddr、广播标志和giaddr等可作辅助依据，不逐个核对或扣分。",
+        "核对B2-Q5读取ACK中的Option 51租期、Option 58 T1和Option 59 T2；未下发T1时默认按租期50%计算自然续租时间。手动renew可在T1之前主动请求延长租约。字段未显示、名称不同或服务器未下发某选项时如实注明即可。",
+        "B2操作与第4—5题分析整体未提供扣6分；有续租结果但两问整组无必要文字分析扣4分；某问完全未答、核心明显错误，或有效租约/命令/报文/租期字段证据整块缺失，合并扣2分一次。因学生先release造成完整DORA可归一般问题；若网络自身导致且解释自洽不扣。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "b2_absent",
+          "points": 6,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-3] B2主动续租操作、报文及第4—5题分析整体未提供；替代本项细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["b2_answers_absent", "b2_issue"]
+        },
+        {
+          "id": "b2_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-3] 有B2续租结果，但第4—5题整组无必要文字分析",
+          "exclusive_with": ["b2_issue"]
+        },
+        {
+          "id": "b2_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-3] 某问完全未答、核心明显错误，或B2有效租约/命令/报文/租期字段证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["B2-Q4", "B2-Q5", "B2-valid-lease", "B2-command", "B2-packets", "B2-lease-fields"]
+        }
+      ]
+    },
+    {
+      "criterion": "A1：DHCP服务器、地址池与客户端验证",
+      "max_score": 20,
+      "grading_notes": [
+        "核对初始拓扑为Server-PT、2960、PC1和PC2同一局域网；服务器有合法静态IPv4地址和掩码，DHCP服务已开启。地址池与服务器处于同一私有子网，至少有三个可分配主机地址、最大用户数不少于3，不包含服务器等静态地址、网络地址或广播地址。",
+        "核对PC1、PC2实际通过DHCP获得与池设计一致的地址和掩码，并完成到服务器实际IPv4地址的Ping。初次Ping因ARP或链路建立出现部分超时、默认网关/DNS保留未指定状态均不扣；本拓扑没有路由器和DNS服务。",
+        "核对A1-Q6按本人地址池范围、掩码、静态排除和客户端实际配置判断是否符合设计；A1-Q7说明仅一个可分配地址时通常只有一台客户端获得租约，另一台获取失败、等待或使用环境特定的备用状态，直到租约释放或池扩大。接受Packet Tracer实际提示。",
+        "A1配置、验证与第6—7题分析整体未提供扣6分；有配置结果但两问整组无必要文字分析扣4分；某问完全未答、核心明显错误，或拓扑/服务器/地址池/客户端/Ping证据整块缺失，合并扣2分一次。地址池错误导致A2的PC3失败时主要在本项记录，同一根因不在A2重复扣。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "a1_absent",
+          "points": 6,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-4] A1拓扑、DHCP配置、客户端验证及第6—7题分析整体未提供；替代本项细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["a1_answers_absent", "a1_issue"]
+        },
+        {
+          "id": "a1_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-4] 有A1配置或验证结果，但第6—7题整组无必要文字分析",
+          "exclusive_with": ["a1_issue"]
+        },
+        {
+          "id": "a1_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-4] 某问完全未答、核心明显错误，或A1必要拓扑/服务器/地址池/客户端/Ping证据整块缺失；一般问题合并一次",
+          "requirement_ids": ["A1-Q6", "A1-Q7", "A1-topology", "A1-server", "A1-pool", "A1-clients", "A1-ping"]
+        }
+      ]
+    },
+    {
+      "criterion": "A2：PC3首次获取地址的仿真与字段分析",
+      "max_score": 25,
+      "grading_notes": [
+        "整体判断核心流程和结果：先进入Simulation，再新增PC3接入同一局域网，观察其首次通过DHCP获址并验证连通性。筛选和清空事件、推进仿真的按钮、是否切到Realtime做Ping均由学生选择。文字、事件列表和截图可相互补充，不要求逐步截图或逐项核对操作细节。",
+        "A2-Q8看是否识别首次获址的主要报文、发送方和PC3实际取得的配置。典型为DISCOVER、OFFER、REQUEST和ACK。接受重传、额外事件和界面差异，关键事件足以说明过程即可。区分报文类型与转发事件。",
+        "A2-Q9根据本人报文解释无地址客户端如何请求、服务器如何送达。目的IP、目的MAC、广播标志等是可选依据，能支持结论即可。Transaction ID、ciaddr、yiaddr等为辅助字段，缺个别字段或界面未显示时不扣。OFFER/ACK可广播也可单播，以实际字段为准。",
+        "关键流程、获址与连通性结果基本正确且证据足以支持结论时，接受合理简答和等价呈现。A2实验与第8—9题分析整体未提供扣8分；有实验结果但两问整组无分析扣4分；某问完全未答、核心结论明显错误，或关键证据整块缺失以致无法判断主要流程或结果，合并扣2分一次。由A1同一地址池错误直接造成的PC3失败不重复扣。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "a2_absent",
+          "points": 8,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-5] A2的PC3首次获取、PDU分析及第8—9题整体未提供；替代本项细项",
+          "requires_visual_evidence": true,
+          "exclusive_with": ["a2_answers_absent", "a2_issue"]
+        },
+        {
+          "id": "a2_answers_absent",
+          "points": 4,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-5] 有A2事件或PC3结果，但第8—9题整组无必要文字分析",
+          "exclusive_with": ["a2_issue"]
+        },
+        {
+          "id": "a2_issue",
+          "points": 2,
+          "max_occurrences": 1,
+          "description": "[RPT-1/RPT-5] 某问完全未答、核心结论明显错误，或关键证据整块缺失以致无法判断A2主要流程或结果。一般问题合并一次",
+          "requirement_ids": ["A2-Q8", "A2-Q9", "A2-events", "A2-pdu", "A2-client", "A2-ping"]
+        }
+      ]
+    },
+    {
+      "criterion": "报告编排",
+      "max_score": 10,
+      "grading_notes": [
+        "只按指导书第5节和教师RPT-8检查，不新增资料来源、反思、小结、软件版本、Wireshark抓包附件或Packet Tracer工程要求。报告命名由教师单列核验；只收到PDF不能推断文件命名或工程提交状态。",
+        "每张实际提交的任务截图均应有图号、图下图名、正文按图号明确引用及必要对应描述。四项分别检查，引用和描述不是二选一；同一句可同时完成两项。每张明确问题图扣2分，最多计最早三张、封顶6分，同图多个缺陷只计一次。记录figures.id=p.N#imageK及每图缺失要素，必须查看原页。",
+        "整项任务无图或整体未做时，不扣不存在图片的编排；已用某任务answers_absent扣过整组无文字分析时，同一缺文字不再重复扣FIG-description，但独立缺图号、图名或图号引用仍可按不同问题图计。图号范围引用、同图支持多问、同一段引用多图均接受。",
+        "仅当全报告其他扣分为空时，原页确认普通中文多行叙述正文首行与后续行左缘对齐、无缩进才扣3分且为唯一扣分。标题、题干、列表、命令、代码、表格、图注和截图内部文字不算；单行或不清楚不扣，不要求精确两个汉字。",
+        "每条扣分必须confirmed、fact=rule并附明确页码；视觉规则须有visual_evidence。先检查四项任务与编排再去重；实际网络、操作系统、服务器和Packet Tracer版本差异按本人证据判断，不确定或OCR错读只标记复核。允许100分；92—98超过80%仅作分布观察，不是配额。正常有效提交的均分下限通过透明统一偏移实现；误交、空白或无效提交只能由教师确认submission_exception。本规则尚未用真实实验7报告做重复评分测试。"
+      ],
+      "deduction_rules": [
+        {
+          "id": "screenshot_documentation_issue",
+          "points": 2,
+          "max_occurrences": 3,
+          "description": "[RPT-6/RPT-8] 每张已提交任务图明确缺图号、图下图名、正文图号引用或必要描述扣2分，最多6分",
+          "requires_visual_evidence": true,
+          "requirement_ids": ["FIG-numbering", "FIG-caption", "FIG-reference", "FIG-description"],
+          "count_by": "figure"
+        },
+        {
+          "id": "body_first_line_indent_missing",
+          "points": 3,
+          "max_occurrences": 1,
+          "description": "[RPT-8] 仅全报告无其他扣分时，原页确认普通中文多行正文首行无缩进；唯一扣分",
+          "requires_visual_evidence": true,
+          "only_if_no_other_deductions": true,
+          "requirement_ids": ["BODY-first-line-indent"]
+        }
+      ]
+    }
+  ]
+}

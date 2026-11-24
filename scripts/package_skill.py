@@ -38,7 +38,7 @@ SKILL_ROOT = Path(__file__).resolve().parent.parent
 # The whole directory goes rather than a list of its current files: a whitelist would leak again
 # the first time somebody drops another log or note in there.
 EXCLUDE_DIRS = {
-    ".git", "tmp", "__pycache__", "dist", "node_modules", "ocr-shims",
+    ".git", "tmp", "__pycache__", "dist", "node_modules", "ocr-shims", "tessdata",
     "实验报告_测试样本", ".workbuddy", "output",
 }
 EXCLUDE_FILES = {".DS_Store", "local.json"}
@@ -80,11 +80,15 @@ REQUIRED_IN_ARCHIVE = (
     "assets/rubrics/experiment-3-udp-tcp.json",
     "assets/rubrics/experiment-4-icmp.json",
     "assets/rubrics/experiment-5-router-configuration.json",
+    "assets/rubrics/experiment-6-ipv4-subnetting.json",
+    "assets/rubrics/experiment-7-dhcp.json",
     "assets/guides/experiment-1-web-http.pdf",
     "assets/guides/experiment-2-dns.html",
     "assets/guides/experiment-3-udp-tcp.html",
     "assets/guides/experiment-4-icmp.html",
     "assets/guides/experiment-5-router-configuration.html",
+    "assets/guides/experiment-6-ipv4-subnetting.html",
+    "assets/guides/experiment-7-dhcp.html",
     "assets/review-panel-template.html",
     "config/defaults.example.json",
     "references/portability.md",
@@ -94,6 +98,8 @@ REQUIRED_IN_ARCHIVE = (
     "references/experiment-3-udp-tcp.md",
     "references/experiment-4-icmp.md",
     "references/experiment-5-router-configuration.md",
+    "references/experiment-6-ipv4-subnetting.md",
+    "references/experiment-7-dhcp.md",
     "agents/openai.yaml",
 )
 

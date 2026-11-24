@@ -26,6 +26,9 @@ config/local.json
 # distributable skill, and package_skill.py excludes it from archives for the same reason.
 assets/signature/*.pdf
 
+# Local Tesseract language data can be supplied by the host and is not part of the skill release.
+assets/tessdata/
+
 # Real student reports kept for regression runs. Excluded by default: they are 20 MB and
 # carry students' names and ID numbers. Include them with:
 #   git add -f 实验报告_测试样本

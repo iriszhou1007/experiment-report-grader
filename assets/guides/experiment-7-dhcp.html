@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>实验7：DHCP 配置与协议分析</title><style>
+:root{
+  --blue:#1f5fae;
+  --blue-dark:#17467f;
+  --blue-light:#eef5fc;
+  --blue-soft:#f7fbff;
+  --text:#1f2937;
+  --muted:#667085;
+  --line:#dbe6f1;
+  --bg:#f5f8fc;
+  --white:#ffffff;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  font-family:"Microsoft YaHei","PingFang SC","Noto Sans SC",Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  line-height:1.75;
+}
+.wrapper{
+  width:min(1080px,calc(100% - 36px));
+  margin:0 auto;
+  padding:28px 0 60px;
+}
+.hero{
+  background:linear-gradient(135deg,var(--blue-dark),var(--blue));
+  color:#fff;
+  border-radius:18px;
+  padding:38px 42px;
+  box-shadow:0 16px 40px rgba(31,95,174,.14);
+}
+.hero .tag{
+  font-size:13px;
+  letter-spacing:.08em;
+  opacity:.82;
+  margin-bottom:8px;
+}
+.hero h1{
+  margin:0 0 12px;
+  font-size:40px;
+  line-height:1.25;
+}
+.hero p{
+  margin:0;
+  max-width:860px;
+  color:rgba(255,255,255,.92);
+  font-size:16px;
+}
+.section{
+  margin-top:24px;
+  background:var(--white);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:26px 28px;
+}
+.section h2{
+  margin:0 0 16px;
+  font-size:24px;
+  color:var(--blue-dark);
+  padding-bottom:10px;
+  border-bottom:2px solid var(--blue-light);
+}
+.section h3{
+  margin:22px 0 10px;
+  font-size:19px;
+  color:var(--blue);
+}
+p{margin:8px 0}
+ul,ol{margin:8px 0 8px 1.2em}
+li{margin:5px 0}
+.meta{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+.meta .box{
+  background:var(--blue-soft);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:16px 18px;
+}
+.meta .box strong{
+  display:block;
+  color:var(--blue-dark);
+  margin-bottom:4px;
+}
+.flow{
+  display:grid;
+  grid-template-columns:1fr auto 1fr auto 1fr;
+  gap:10px;
+  align-items:center;
+  margin-top:18px;
+}
+.step{
+  background:var(--blue-soft);
+  border:1px solid #cfe0f1;
+  border-radius:12px;
+  padding:16px 12px;
+  text-align:center;
+  min-height:112px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.step b{
+  display:block;
+  color:var(--blue);
+  margin-bottom:6px;
+}
+.arrow{
+  text-align:center;
+  color:#8da9c4;
+  font-size:26px;
+}
+.task{
+  margin-top:22px;
+  border:1px solid var(--line);
+  border-left:4px solid var(--blue);
+  border-radius:12px;
+  padding:20px 22px;
+  background:#fff;
+}
+.task h3{
+  margin:0 0 12px;
+  color:var(--blue-dark);
+}
+.label{
+  font-size:13px;
+  font-weight:700;
+  color:var(--blue);
+  margin-top:12px;
+}
+.verify{
+  background:var(--blue-soft);
+  border:1px solid #d6e5f4;
+  border-radius:10px;
+  padding:12px 14px;
+  margin-top:10px;
+}
+.questions{
+  background:#f4f8fd;
+  border:1px solid #d7e5f3;
+  border-radius:10px;
+  padding:14px 16px;
+  margin-top:12px;
+}
+.url{
+  display:block;
+  background:#0f2740;
+  color:#eef6ff;
+  padding:12px 14px;
+  border-radius:8px;
+  font-family:Consolas,Monaco,monospace;
+  overflow-wrap:anywhere;
+  margin:10px 0 12px;
+  text-decoration:underline;
+}
+.url:hover{color:#fff}
+.note{
+  margin-top:16px;
+  padding:12px 14px;
+  border-radius:9px;
+  background:#f8fbff;
+  border:1px dashed #b9d1e8;
+  color:#46586a;
+}
+.report-list{
+  margin:12px 0 0;
+  padding-left:1.7em;
+}
+.report-list li{
+  padding-left:4px;
+  margin:10px 0;
+}
+.report-list strong{color:var(--blue-dark)}
+.key-rule{color:#a32121;font-weight:700}
+.footer{
+  text-align:center;
+  color:#7a8795;
+  font-size:13px;
+  margin-top:24px;
+}
+code{
+  background:#f1f5f9;
+  border:1px solid #e2e8f0;
+  border-radius:5px;
+  padding:1px 5px;
+  font-family:Consolas,Monaco,monospace;
+}
+@media(max-width:860px){
+  .hero h1{font-size:30px}
+  .meta{grid-template-columns:1fr}
+  .flow{display:block}
+  .step{min-height:auto;margin:10px 0}
+  .arrow{transform:rotate(90deg);height:28px}
+}
+
+
+.hero h1{font-size:32px}.hero{padding:30px 34px}.section{padding:22px 26px}body{font-size:15px;line-height:1.75}
+.task{padding:18px 20px;margin-top:16px}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}th,td{border:1px solid #dbe6f1;padding:10px 12px;text-align:left;vertical-align:top}th{background:#eef5fc;color:#17467f}tbody tr:nth-child(even){background:#fbfdff}figure{margin:16px 0}figure img{display:block;width:100%;height:auto;border:1px solid #dbe6f1;border-radius:10px}figcaption{font-size:13px;color:#667085;text-align:center;margin-top:8px}.badge{display:inline-block;background:#eef5fc;color:#17467f;border:1px solid #cfe0f1;border-radius:5px;padding:1px 7px;font-size:12px;margin-right:8px}.questions li{margin:10px 0}.lead{font-weight:700;color:#17467f}.compact li{margin:4px 0}.references{font-size:13px;color:#667085;overflow-wrap:anywhere}a{color:#1f5fae}code{overflow-wrap:anywhere}.flow{grid-template-columns:repeat(4,1fr)}.step{min-height:90px}.note strong{color:#17467f}.print-note{font-size:13px;color:#667085}@media(max-width:620px){.wrapper{width:calc(100% - 20px);padding-top:12px}.hero{padding:24px 20px}.hero h1{font-size:25px}.section{padding:18px 16px}.task{padding:16px 14px}.section h2{font-size:21px}th,td{padding:8px}table{min-width:650px}}
+
+.flow{grid-template-columns:repeat(3,1fr)}.questions h3{margin-top:20px}.section h3{color:#17467f}.scope{border-left:4px solid #1f5fae}.small{font-size:13px;color:#667085}@media(max-width:620px){.flow{grid-template-columns:1fr}.step{min-height:0}}
+
+/* Retain the document's blue headings and title banner in printed/PDF output. */
+@media print {
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  body { background: #fff; }
+  .wrapper { width: 100%; padding: 0; }
+  .hero, .section { box-shadow: none; }
+  .hero {
+    background-color: #17467f !important;
+    background-image: linear-gradient(135deg, #17467f, #1f5fae) !important;
+    color: #fff !important;
+    padding: 15px;
+  }
+  .hero h1 { color: #fff !important; font-size: 32px; }
+  .hero p, .hero .tag { color: #fff !important; }
+  .section h2, .section h3 { color: #17467f !important; }
+  .section h2 { border-bottom-color: #dbe6f1 !important; }
+  .label, .step b { color: #1f5fae !important; }
+  th { color: #17467f !important; background: #eef5fc !important; }
+  .section, .task { break-inside: auto; }
+  .section h2, .label, figcaption { break-after: avoid; }
+  .verify, .note, figure, tr { break-inside: avoid; }
+  .table-wrap { overflow: visible; }
+  table { min-width: 0 !important; font-size: 11px; }
+  th, td { padding: 6px; }
+  .section { margin-top: 14px; }
+  a { color: #17467f; text-decoration: none; }
+}
+
+.flow{grid-template-columns:repeat(2,1fr)}@media(max-width:620px){.flow{grid-template-columns:1fr}}
+
+.task > ol{margin:8px 0 14px;padding-left:1.7em}.task > ol > li{margin:7px 0}.task > .label{margin-top:16px}
+
+table caption{caption-side:top;text-align:center;font-weight:700;color:#17467f;padding:0 0 8px;break-after:avoid}
+
+pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;line-height:1.6;font-size:14px}
+pre code{padding:0;border:0;background:transparent}
+.task h4{font-size:15px;color:#1f5fae;margin:16px 0 6px}
+.questions h4{margin:0 0 6px;color:#17467f}
+.task .questions ol{padding-left:1.7em;margin-left:0}
+.section>ol{padding-left:1.7em;margin-left:0}
+.hero h1{font-size:30px}.hero .tag{letter-spacing:.04em}
+@page{size:A4;margin:15mm}
+@media print{body{font-size:11pt;line-height:1.6}.hero h1{font-size:22pt}.section{padding:14px 16px}.section h2{font-size:16pt}.task h3{font-size:13pt}.task h4,.questions h4{font-size:11pt}.task{padding:12px 14px}.questions{padding:10px 12px}p,li{orphans:2;widows:2}h2,h3,h4{break-after:avoid}pre{font-size:9pt;break-inside:avoid}.questions li{margin:8px 0}}
+
+.task pre{margin:10px 0}.task p{overflow-wrap:anywhere}.table-wrap{overflow-x:auto}caption{caption-side:top;text-align:left;font-weight:600;color:#17467f;padding:0 0 10px}code{overflow-wrap:anywhere}
+
+body{font-size:14px}.task h4{margin:12px 0 5px;color:var(--blue-dark);font-size:15px}.task li{margin:5px 0}.questions h4{margin-top:0}.task .questions ol{margin-bottom:0}pre{white-space:pre-wrap;background:#f1f5f9;border:1px solid #dbe6f1;border-radius:6px;padding:9px 12px}pre code{background:none;border:0;padding:0}figure{margin:14px auto}figure img{width:100%;height:auto}.topo svg{width:100%;max-width:680px;height:auto}figcaption{font-size:13px;color:#526b83;text-align:center;margin-top:6px}.template{background:#f4f8fd;border:1px solid #d7e5f3;border-radius:8px;padding:10px 14px}.template p{margin:4px 0}
+@page{size:A4;margin:13mm 14mm}
+@media print{html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-size:10.5pt;line-height:1.5}.wrapper{width:100%;padding:0;margin:0}.hero{padding:12px 16px}.hero h1{font-size:22pt}.section{padding:12px 16px;margin-top:10px;break-inside:auto}.section h2{font-size:15pt}.task{padding:10px 13px;margin-top:10px;break-inside:auto}.task h3{font-size:12pt}.task h4{font-size:10.5pt}.questions{padding:8px 12px;break-inside:avoid}h2,h3,h4{break-after:avoid}figure,pre,.template,tr{break-inside:avoid}.topo svg{max-width:400px}.questions ol{list-style-type:decimal}.note{padding:8px 10px}}
+</style></head><body><div class="wrapper"><header class="hero"><div class="tag">计算机网络课程设计 · 实验指导书</div><h1>实验7：DHCP 配置与协议分析</h1></header>
+<section class="section"><h2>1. 实验目标</h2><ol><li>配置 DHCPv4 服务器与客户端，验证动态地址分配结果。</li><li>观察地址获取过程中的报文交互，理解特殊 IP 地址和广播的作用。</li><li>在客户端持有有效租约时主动触发续租，解释续租与初次获取地址的差异。</li></ol></section>
+<section class="section"><h2>2. 实验环境与安排</h2>
+<table><caption>表1　实验环境</caption><thead><tr><th>部分</th><th>环境与工具</th></tr></thead><tbody><tr><td>B：真实报文分析</td><td>Windows；Wireshark；启用 DHCPv4 的网络连接。</td></tr><tr><td>A：配置与报文观察</td><td>Cisco Packet Tracer；Server-PT；2960 交换机；三台 PC-PT（PC3 在 A2 中新增）；Simulation 模式。</td></tr></tbody></table>
+<p class="note"><strong>实施顺序：B1 → A1、A2 → B2。</strong> B1 完成重新获取地址后保存抓包，并保持目标网卡连接及租约有效；完成仿真实验后，在 B2 中重新开始或继续抓包，通过 <code>ipconfig /renew</code> 主动触发续租。</p>
+<p>释放地址会短时断网。先用 <code>ipconfig /all</code> 确认目标网卡名称；命令未指定网卡时会作用于所有启用 DHCP 的网卡。相关命令应在实验机本地执行。</p></section>
+<section class="section"><h2>3. B：真实 DHCP 报文分析</h2><article class="task"><h3>任务B1　重新获取地址并捕获报文</h3><h4>任务要求</h4><ol><li>在真实操作系统中使用启用 DHCPv4 的网络连接。先用 <code>ipconfig /all</code> 确认目标网卡名称，再启动该网卡的 Wireshark 抓包并依次执行以下命令。将示例中的“适配器名称”替换为实际名称；用显示过滤器 <code>dhcp</code> 筛选报文。<pre><code>ipconfig /release "适配器名称"
+ipconfig /renew "适配器名称"
+ipconfig /all</code></pre></li><li>识别本机本次重新获取地址的报文，核对重新获取后的 IPv4 配置。</li><li>保存 B1 抓包并保持目标网卡连接及租约有效。可以停止抓包后转做 A 部分；B2 前不要再次释放地址、禁用网卡或切换网络。</li></ol><h4>完成要求</h4><p>提交完整命令与输出截图、一次重新获取地址的报文列表，以及回答本任务问题所需的报文字段截图。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="1" style="counter-reset:list-item 0"><li>哪些报文构成本次重新获取地址的过程？说明识别依据。</li><li>DHCP 使用什么传输层协议？客户端与服务器使用的端口分别是什么？Transaction ID 起什么作用？</li><li>本次分配的 IPv4 地址、子网掩码、默认网关和 DNS 服务器分别是什么？用本次成功的 DHCPACK（若已捕获）与本机配置核对，说明两者是否一致。</li></ol></div></article><article class="task"><h3>任务B2　在有效租约下主动触发续租并分析差异</h3><h4>任务要求</h4><ol><li>完成 A 部分后，用 <code>ipconfig /all</code> 确认 B1 的目标网卡仍持有有效 DHCPv4 租约；若网卡已经断开、切换网络或租约失效，应先恢复到有效租约状态并如实记录。</li><li>在 Wireshark 中重新开始或继续抓取该网卡，不执行 <code>ipconfig /release</code>，然后执行 <code>ipconfig /renew "适配器名称"</code> 主动触发续租。</li><li>查找该网卡产生的 DHCPREQUEST 及服务器响应，与 B1 的重新获取过程对照。有效租约和原服务器可达时通常只需 DHCPREQUEST 与 DHCPACK；若实际重新出现 DHCPDISCOVER、DHCPOFFER 或收到 DHCPNAK，按实际报文记录并解释，不把预期流程代替观察结果。</li><li>查看 DHCPACK 中的租期、Renewal Time（T1）和 Rebinding Time（T2）。若未下发 T1，按租期的 50% 计算默认自然续租时间。</li></ol><h4>完成要求</h4><p>提交主动续租命令与输出、对应的请求和响应报文列表及关键字段，并说明它与 B1 重新获取地址的差异。记录 ACK 中的租约、T1 和 T2；未下发的选项如实注明并给出默认 T1 的计算。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="4" style="counter-reset:list-item 3"><li>B1 重新获取地址与 B2 主动续租的报文交互、地址使用和发送方式有什么不同？若本次重新进入完整地址获取流程，结合实际网络状态说明原因。</li><li>本次 ACK 中的租期、T1 和 T2 分别是多少？若未下发明确的 T1，应如何计算默认自然续租时间？本次手动执行 <code>ipconfig /renew</code> 为什么可以在 T1 到达前触发续租？</li></ol></div></article></section>
+<section class="section"><h2>4. A：DHCP 配置与仿真观察</h2><figure class="topo">
+<svg viewBox="0 0 760 220" role="img" aria-labelledby="topotitle topodesc" xmlns="http://www.w3.org/2000/svg">
+<title id="topotitle">DHCP 仿真网络拓扑</title><desc id="topodesc">Server-PT、PC1 与 PC2 分别用铜质直通线连接同一台 2960 交换机。</desc>
+<g fill="none" stroke="#557698" stroke-width="3"><path d="M380 69V96 M380 143V160H173V177 M380 160H587V177"/></g>
+<g fill="#edf5ff" stroke="#7297bf" stroke-width="1.5"><rect x="273" y="13" width="214" height="56" rx="9"/><rect x="278" y="96" width="204" height="47" rx="9"/><rect x="100" y="177" width="146" height="34" rx="7"/><rect x="514" y="177" width="146" height="34" rx="7"/></g>
+<g text-anchor="middle" fill="#19395b" font-size="17" font-family="Noto Sans CJK SC, Microsoft YaHei, sans-serif" font-weight="600"><text x="380" y="35">Server-PT</text><text x="380" y="57">DHCP 服务器</text><text x="380" y="125">2960 交换机</text><text x="173" y="200">PC1（PC-PT）</text><text x="587" y="200">PC2（PC-PT）</text></g>
+<text x="54" y="125" font-size="15" fill="#355675" font-family="Noto Sans CJK SC, Microsoft YaHei, sans-serif">连线：铜质直通线</text>
+</svg>
+<figcaption>图1　任务A1的初始 DHCP 仿真网络拓扑；任务A2将在此基础上新增 PC3</figcaption>
+</figure><p class="note">本拓扑只验证同一局域网内的地址分配和通信，未部署路由器及 DNS 服务。默认网关和 DNS 不配置有效地址，保留界面未指定状态。任务A1先配置图示设备；任务A2进入 Simulation 模式后再新增 PC3。</p><article class="task"><h3>任务A1　配置 DHCP 服务器与客户端</h3><h4>任务要求</h4><ol><li>按图1搭建初始网络。使用一台 Server-PT、一台 2960 交换机和两台 PC-PT，以铜质直通线连接。</li><li>自行规划一个私有 IPv4 子网，为服务器配置静态 IPv4 地址和掩码。开启 Server-PT 的 DHCP 服务并配置地址池，设置池名、起始地址、子网掩码及最大用户数。池内至少有三个可分配地址，最大用户数不得小于 3，地址池不得与服务器等静态地址冲突，也不得包含网络地址或广播地址。</li><li>等待交换机端口链路就绪后，使 PC1、PC2 通过 DHCP 获取 IPv4 配置。分别执行 <code>ping 服务器实际IPv4地址</code>，验证与服务器的连通性。</li></ol><h4>完成要求</h4><p>提交初始网络拓扑、服务器 IPv4 配置、DHCP 地址池、PC1和PC2的自动获取结果，以及两组完整 Ping 命令与输出截图。</p><div class="questions"><h4>思考问题（报告必答）</h4><ol start="6" style="counter-reset:list-item 5"><li>PC1和PC2实际获得的地址是否符合你的地址池设计？说明依据。</li><li>如果地址池仅有一个可分配地址，两台 PC 都申请地址时会怎样？为什么？</li></ol></div></article>
+<article class="task"><h3>任务A2　在 Simulation 模式中观察 PC3 首次获取地址</h3>
+<h4>任务要求</h4><ol>
+<li>完成 A1 后，先切换到 Simulation 模式，再新增一台 PC-PT（PC3）并接入同一局域网。</li>
+<li>链路就绪后，让 PC3 首次通过 DHCP 获取 IPv4 配置，观察报文交互。可自行选择如何筛选事件和推进仿真。</li>
+<li>核对 PC3 实际取得的配置，并用 Ping 验证与服务器的连通性。需要时，可先保留仿真证据，再切换到 Realtime 模式进行 Ping。</li>
+</ol><h4>完成要求</h4><p>用本人截图呈现 PC3 首次获址的关键事件、能支持分析的报文字段、最终配置和连通性测试。区分报文类型与同一报文在不同设备上的转发事件。界面未显示的字段可如实注明。</p>
+<div class="questions"><h4>思考问题（报告必答）</h4><ol start="8" style="counter-reset:list-item 7"><li>PC3 本次首次地址获取包含哪些主要类型的报文？分别由谁发送？PC3 最终获得了什么配置信息？</li><li>PC3 尚未取得地址时如何发出请求？服务器如何将响应送达 PC3？选取能支持判断的实际报文字段（例如目的 IP、目的 MAC 或广播标志），说明报文是怎样发送的。</li></ol></div></article>
+</section><section class="section"><h2>5. 实验报告与提交</h2>
+<p>各任务的配置和测试结果均须提供本人截图，覆盖该任务的全部验证点。每张图下方注明图号和图名，答案中引用对应图号；同一截图可支持多道问题，无需重复粘贴。</p>
+<p>按课程统一的实验报告格式撰写，完成各任务要求并回答全部思考问题。</p>
+<p>只提交一份实验报告，文件命名为“学号_姓名_实验7”，不提交 Packet Tracer 工程文件。</p></section></div></body></html>
